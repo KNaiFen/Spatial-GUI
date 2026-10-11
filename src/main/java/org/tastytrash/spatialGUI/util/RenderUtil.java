@@ -81,8 +81,8 @@ public final class RenderUtil {
                             ^///?}
         }
         *///?}
-        float baselineFov = (float) SpatialGUI.config.autoFovTuning.autoScaleBaselineFov;
-        float power = (float) SpatialGUI.config.autoFovTuning.autoScaleScreenPower;
+        float baselineFov = (float) SpatialGUI.config.autoScaleBaselineFov;
+        float power = (float) SpatialGUI.config.autoScaleScreenPower;
 
         float ratio = currentFov / baselineFov;
         return (float) Math.pow(ratio, power);
@@ -102,7 +102,7 @@ public final class RenderUtil {
             );
         }
 
-        float thirdPersonFovMultiplier = 1.0f + (fovMultiplier - 1.0f) * (float) SpatialGUI.config.autoFovTuning.autoScaleThirdPersonScreenMultiplier;
+        float thirdPersonFovMultiplier = 1.0f + (fovMultiplier - 1.0f) * (float) SpatialGUI.config.autoScaleThirdPersonScreenMultiplier;
         float sideOffset = (float) SpatialGUI.config.screenSideOffset;
         float yawOffset = (float) SpatialGUI.config.screenYawOffset;
 

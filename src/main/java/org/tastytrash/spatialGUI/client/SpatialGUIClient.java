@@ -83,9 +83,9 @@ public class SpatialGUIClient {
         renderer = new SpatialGUIRenderer();
 
         ModLoadingContext.get().registerExtensionPoint(
-                ConfigScreenHandler.ConfigScreenFactory.class,
-                () -> new ConfigScreenHandler.ConfigScreenFactory(
-                        (mc, parent) -> me.shedaniel.autoconfig.AutoConfigClient.getConfigScreen(SpatialGUIConfig.class, parent).get())
+        ConfigScreenHandler.ConfigScreenFactory.class,
+        () -> new ConfigScreenHandler.ConfigScreenFactory(
+                (mc, parent) -> SpatialGUIConfig.HANDLER.generateGui().generateScreen(parent))
         );
 
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -107,12 +107,12 @@ public class SpatialGUIClient {
     }
 
     public static boolean shouldHideHud() {
-        return isEnabled() && SpatialGUI.config.hudOptions.hideHud
+        return isEnabled() && SpatialGUI.config.hideHud
                 && renderer() != null && renderer().getHookedScreen() != null;
     }
 
     public static boolean shouldHideHotbar() {
-        return isEnabled() && SpatialGUI.config.hudOptions.hideHotbar
+        return isEnabled() && SpatialGUI.config.hideHotbar
                 && renderer() != null && renderer().getHookedScreen() != null;
     }
 

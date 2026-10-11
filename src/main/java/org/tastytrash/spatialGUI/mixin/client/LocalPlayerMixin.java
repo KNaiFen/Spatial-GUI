@@ -33,7 +33,7 @@ public abstract class LocalPlayerMixin {
                 && SpatialGUIClient.isEnabled()
                 && SpatialGUIClient.getEffectiveFirstPersonMode()
                 && renderer.getHookedScreen() != null
-                && !SpatialGUI.config.firstPersonHands.hideHandsInFirstPerson;
+                && !SpatialGUI.config.hideHandsInFirstPerson;
     }
 
     @Unique

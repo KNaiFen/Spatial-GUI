@@ -1,94 +1,505 @@
 package org.tastytrash.spatialGUI.client;
 
-import me.shedaniel.autoconfig.ConfigData;
-import me.shedaniel.autoconfig.annotation.Config;
-import me.shedaniel.autoconfig.annotation.ConfigEntry;
-
+import dev.isxander.yacl3.api.Option;
+import dev.isxander.yacl3.api.controller.ControllerBuilder;
+import dev.isxander.yacl3.api.controller.StringControllerBuilder;
+import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
+import dev.isxander.yacl3.config.v2.api.ConfigField;
+import dev.isxander.yacl3.config.v2.api.SerialEntry;
+import dev.isxander.yacl3.config.v2.api.autogen.*;
+import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
+//? if fabric {
+import net.fabricmc.loader.api.FabricLoader;
+//?} else if neoforge {
+/*import net.neoforged.fml.loading.FMLPaths;
+ *///?} else if forge {
+/*import net.minecraftforge.fml.loading.FMLPaths;
+ *///?}
+//? if >=1.21.11 {
+import net.minecraft.resources.Identifier;
+//?} else {
+/*import net.minecraft.resources.ResourceLocation;
+ *///?}
 import java.util.ArrayList;
 import java.util.List;
 
-@Config(name = "spatial-gui")
-public class SpatialGUIConfig implements ConfigData {
-    /**
-     * NEVER PUT ANYTHING BUT BOOLEANS IN COLLAPSIBLE MENUS
-     * CLOTH CONFIG BREAKS THEM
-     * Auto FOV Tuning is an exception because people are unlikely to touch it
-     */
+public class SpatialGUIConfig {
 
+    public static final ConfigClassHandler<SpatialGUIConfig> HANDLER =
+            ConfigClassHandler.createBuilder(SpatialGUIConfig.class)
+                    //? if >=1.21.11 {
+                    .id(Identifier.fromNamespaceAndPath("spatial-gui", "config"))
+                    //?} else if >1.20.1 {
+                    /*.id(ResourceLocation.fromNamespaceAndPath("spatial-gui", "config"))
+                     *///?} else {
+                    /*.id(new ResourceLocation("spatial-gui", "config"))
+                     *///?}
+                    .serializer(config -> GsonConfigSerializerBuilder.create(config)
+                            .setPath(configDir().resolve("spatial-gui.json5"))
+                            .setJson5(true)
+                            .build())
+                    .build();
+
+    public static SpatialGUIConfig get() {
+        return HANDLER.instance();
+    }
+
+    // ========
     // general
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
+    // ========
+    @SerialEntry
+    @AutoGen(category = "general")
+    @TickBox
     public boolean enabled = true;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
-    public boolean firstPersonModeInventory = false;
-
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
-    public boolean firstPersonModeContainers = false;
-
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
-    public boolean useCrosshairForFirstPerson = true;
-
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
+    // viewMode 
+    @MasterTickBox(value = {"firstPersonModeInventory", "firstPersonModeContainers"}, invert = true)
+    @SerialEntry
+    @AutoGen(category = "general", group = "viewMode")
+    @TickBox
     public boolean autoDetectCameraMode = false;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
+    @SerialEntry
+    @AutoGen(category = "general", group = "viewMode")
+    @TickBox
+    public boolean firstPersonModeInventory = false;
+
+    @SerialEntry
+    @AutoGen(category = "general", group = "viewMode")
+    @TickBox
+    public boolean firstPersonModeContainers = false;
+
+    // hud 
+    @MasterTickBox(value = {"hideHotbar"}, invert = true)
+    @SerialEntry
+    @AutoGen(category = "general", group = "hud")
+    @TickBox
+    public boolean hideHud = false;
+
+    @SerialEntry
+    @AutoGen(category = "general", group = "hud")
+    @TickBox
+    public boolean hideHotbar = false;
+
+    // ========
+    // screens
+    // ========
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @TickBox
+    public boolean inventory = true;
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @TickBox
+    public boolean containers = true;
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @TickBox
+    public boolean pauseScreen = false;
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @TickBox
+    public boolean allScreens = false;
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @ListGroup(valueFactory = StringValueFactory.class, controllerFactory = StringControllerFactory.class)
+    public List<String> enabledScreens = defaultEnabledScreens();
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @ListGroup(valueFactory = StringValueFactory.class, controllerFactory = StringControllerFactory.class)
+    public List<String> disabledScreens = new ArrayList<>();
+
+    @SerialEntry
+    @AutoGen(category = "screens")
+    @ListGroup(valueFactory = StringValueFactory.class, controllerFactory = StringControllerFactory.class)
+    public List<String> seenScreens = new ArrayList<>();
+
+    // ==========
+    // appearance
+    // ==========
+    // size 
+    @MasterTickBox(value = {"guiScale"}, invert = true)
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "size")
+    @TickBox
     public boolean autoCalculateGuiScale = true;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 1, max = 6)
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "size")
+    @IntSlider(min = 1, max = 6, step = 1)
     public int guiScale = 4;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "size")
+    @IntSlider(min = 25, max = 100, step = 1)
+    public int renderScalePercent = 100;
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "size")
+    @DoubleSlider(min = 1.0, max = 3.0, step = 0.05)
+    public double recipeBookShrinkFactor = 1.5;
+
+    // look 
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "look")
+    @IntSlider(min = 0, max = 255, step = 1)
+    public int screenAlpha = 255;
+
+    //? if >=26.1.2 {
+    @MasterTickBox(value = {"worldBlurStrength"})
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "look")
+    @TickBox
+    public boolean blurWorldBackground = false;
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "look")
+    @IntSlider(min = 1, max = 10, step = 1)
+    public int worldBlurStrength = 5;
+    //?}
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "look")
+    @TickBox
+    public boolean useLinearFiltering = true;
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "look")
+    @TickBox
+    public boolean useAnisotropicFiltering = true;
+
+    // firstPersonHands 
+    @MasterTickBox(value = {"hideShieldInFirstPerson"}, invert = true)
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "firstPersonHands")
+    @TickBox
+    public boolean hideHandsInFirstPerson = false;
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "firstPersonHands")
+    @TickBox
+    public boolean hideShieldInFirstPerson = true;
+
+    @SerialEntry
+    @AutoGen(category = "appearance", group = "firstPersonHands")
+    @TickBox
+    public boolean swingArmOnFirstPersonClick = false;
+
+    // ===========
+    // thirdPerson
+    // ===========
+    // screen 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = 0.5, max = 10.0, step = 0.05)
+    public double screenDistance = 2.5;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = -5.0, max = 5.0, step = 0.05)
+    public double screenSideOffset = -0.6;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = -3.0, max = 3.0, step = 0.05)
+    public double screenHeightOffset = -0.4;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = -360.0, max = 360.0, step = 1.0)
+    public double screenYawOffset = 160.0;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = -90.0, max = 90.0, step = 1.0)
+    public double screenPitchOffset = 0.0;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "screen")
+    @DoubleSlider(min = 0.5, max = 10.0, step = 0.05)
+    public double screenScale = 3.5;
+
+    // camera 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @DoubleSlider(min = 0.5, max = 6.0, step = 0.05)
+    public double cameraDistance = 1.7;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @DoubleSlider(min = -4.0, max = 4.0, step = 0.05)
+    public double cameraSideOffset = -1.2;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @DoubleSlider(min = -1.0, max = 4.0, step = 0.05)
+    public double cameraHeightOffset = 1.5;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @DoubleSlider(min = -90.0, max = 90.0, step = 1.0)
+    public double cameraTargetPitch = 10.0;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @TickBox
+    public boolean lerpCameraPitch = true;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @TickBox
+    public boolean disableThirdPersonParallax = false;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "camera")
+    @TickBox
+    public boolean fallbackToFirstPersonOnBlockCollision = false;
+
+    // avatar 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @TickBox
     public boolean mirrorThirdPerson = false;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.CollapsibleObject
-    public HUD hudOptions = new HUD();
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @TickBox
+    public boolean mirrorHeadMovement = false;
 
-    public static class HUD {
-        @ConfigEntry.Category("general")
-        @ConfigEntry.Gui.Tooltip
-        public boolean hideHotbar = false;
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @DoubleSlider(min = -180.0, max = 180.0, step = 1.0)
+    public double avatarBaseYawOffset = 30.0;
 
-        @ConfigEntry.Category("general")
-        @ConfigEntry.Gui.Tooltip
-        public boolean hideHud = false;
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @DoubleSlider(min = -180.0, max = 180.0, step = 1.0)
+    public double avatarBodyRotationOffset = 20.0;
+
+    // controls 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "controls")
+    @DoubleSlider(min = 0.01, max = 1.0, step = 0.01)
+    public double thirdPersonMouseSensitivityYaw = 0.1;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "controls")
+    @DoubleSlider(min = 0.01, max = 1.0, step = 0.01)
+    public double thirdPersonMouseSensitivityPitch = 0.03;
+
+    // transition 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "transition")
+    @IntSlider(min = 1, max = 5000, step = 10)
+    public int transitionDurationMs = 300;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "transition")
+    @IntSlider(min = 0, max = 100, step = 1)
+    public int transitionSkipPercentage = 15;
+
+    // ===========
+    // firstPerson
+    // ===========
+    // screen 
+
+    @MasterTickBox(value = {"curvedScreenArcDegrees"})
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @TickBox
+    public boolean curvedScreenEnabled = false;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @IntSlider(min = 5, max = 150, step = 1)
+    public int curvedScreenArcDegrees = 30;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = 0.5, max = 6.0, step = 0.05)
+    public double firstPersonScreenDistance = 1.5;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = -3.0, max = 3.0, step = 0.05)
+    public double firstPersonScreenSideOffset = 0.0;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = -3.0, max = 3.0, step = 0.05)
+    public double firstPersonScreenHeightOffset = 0.0;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = -360.0, max = 360.0, step = 1.0)
+    public double firstPersonScreenYawOffset = 180.0;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = -90.0, max = 90.0, step = 1.0)
+    public double firstPersonScreenPitchOffset = 0.0;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "screen")
+    @DoubleSlider(min = 0.5, max = 10.0, step = 0.05)
+    public double firstPersonScreenScale = 1.8;
+
+    // camera 
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "camera")
+    @TickBox
+    public boolean keepFirstPersonCameraAngle = true;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "camera")
+    @TickBox
+    public boolean inheritScreenOriginOnSwap = true;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "camera")
+    @TickBox
+    public boolean disableFirstPersonParallax = false;
+
+    // controls 
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "controls")
+    @TickBox
+    public boolean useCrosshairForFirstPerson = true;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "controls")
+    @DoubleSlider(min = 0.01, max = 1.0, step = 0.01)
+    public double firstPersonMouseSensitivityYaw = 0.4;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "controls")
+    @DoubleSlider(min = 0.01, max = 1.0, step = 0.01)
+    public double firstPersonMouseSensitivityPitch = 0.12;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "controls")
+    @IntSlider(min = 0, max = 90, step = 1)
+    public int firstPersonPitchClamp = 40;
+
+    @SerialEntry
+    @AutoGen(category = "firstPerson", group = "controls")
+    @TickBox
+    public boolean lockFirstPersonYaw = false;
+
+    // ==========
+    // animations
+    // ==========
+    // fade 
+    @MasterTickBox(value = {"fadeDurationMs"})
+    @SerialEntry
+    @AutoGen(category = "animations", group = "fade")
+    @TickBox
+    public boolean enableFadeAnimation = true;
+
+    @SerialEntry
+    @AutoGen(category = "animations", group = "fade")
+    @IntSlider(min = 0, max = 1000, step = 10)
+    public int fadeDurationMs = 150;
+
+    // scale 
+    @MasterTickBox(value = {"openAnimationDurationMs", "animationStartScalePercent", "animationEasing"})
+    @SerialEntry
+    @AutoGen(category = "animations", group = "scale")
+    @TickBox
+    public boolean enableScaleAnimation = true;
+
+    @SerialEntry
+    @AutoGen(category = "animations", group = "scale")
+    @IntSlider(min = 50, max = 1000, step = 10)
+    public int openAnimationDurationMs = 300;
+
+    @SerialEntry
+    @AutoGen(category = "animations", group = "scale")
+    @IntSlider(min = 1, max = 100, step = 1)
+    public int animationStartScalePercent = 75;
+
+    @SerialEntry
+    @AutoGen(category = "animations", group = "scale")
+    @EnumCycler
+    public EasingType animationEasing = EasingType.Back;
+
+    public enum EasingType {
+        Cubic,
+        Elastic,
+        Bounce,
+        Back,
+        Exponential,
+        Quadratic,
+        Quartic
     }
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.Tooltip
+    // ====
+    // fov
+    // ====
+    // override 
+    @MasterTickBox(value = {"targetFov", "fovLerpSpeed"})
+    @SerialEntry
+    @AutoGen(category = "fov", group = "override")
+    @TickBox
+    public boolean overrideFov = false;
+
+    @SerialEntry
+    @AutoGen(category = "fov", group = "override")
+    @IntSlider(min = 30, max = 110, step = 1)
+    public int targetFov = 70;
+
+    @SerialEntry
+    @AutoGen(category = "fov", group = "override")
+    @IntSlider(min = 0, max = 50, step = 1)
+    public int fovLerpSpeed = 10;
+
+    // autoScale 
+    @MasterTickBox(value = {
+            "autoScaleBaselineFov",
+            "autoScaleScreenPower",
+            "autoScaleSideOffsetMultiplier",
+            "autoScaleDistanceMultiplier",
+            "autoScaleThirdPersonScreenMultiplier"
+    })
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @TickBox
     public boolean autoScaleByFov = true;
 
-    @ConfigEntry.Category("general")
-    @ConfigEntry.Gui.CollapsibleObject
-    public AutoFovTuning autoFovTuning = new AutoFovTuning();
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @DoubleSlider(min = 30.0, max = 110.0, step = 1.0)
+    public double autoScaleBaselineFov = 70.0;
 
-    public static class AutoFovTuning {
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @DoubleSlider(min = 0.1, max = 3.0, step = 0.05)
+    public double autoScaleScreenPower = 1.2;
 
-        @ConfigEntry.Gui.Tooltip
-        public double autoScaleBaselineFov = 70.0;
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @DoubleSlider(min = -2.0, max = 2.0, step = 0.05)
+    public double autoScaleSideOffsetMultiplier = -0.3;
 
-        @ConfigEntry.Gui.Tooltip
-        public double autoScaleScreenPower = 1.2;
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @DoubleSlider(min = 0.1, max = 3.0, step = 0.05)
+    public double autoScaleDistanceMultiplier = 0.8;
 
-        @ConfigEntry.Gui.Tooltip
-        public double autoScaleSideOffsetMultiplier = -0.3;
+    @SerialEntry
+    @AutoGen(category = "fov", group = "autoScale")
+    @DoubleSlider(min = 0.1, max = 2.0, step = 0.01)
+    public double autoScaleThirdPersonScreenMultiplier = 0.82;
 
-        @ConfigEntry.Gui.Tooltip
-        public double autoScaleDistanceMultiplier = 0.8;
-
-        @ConfigEntry.Gui.Tooltip
-        public double autoScaleThirdPersonScreenMultiplier = 0.82;
-    }
-
+    
+    
+    
+    
     public int calculateAutoGuiScale(int windowWidth, int windowHeight) {
         if (windowHeight <= 0 || windowWidth <= 0) return 1;
         int scale = 1;
@@ -132,35 +543,20 @@ public class SpatialGUIConfig implements ConfigData {
         int relativeScale = Math.round(clampedGuiScale * (autoScale / 4.0f));
         return Math.max(1, relativeScale);
     }
+    
+    public static class StringValueFactory implements ListGroup.ValueFactory<String> {
+        @Override
+        public String provideNewValue() {
+            return "";
+        }
+    }
 
-    // screens
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public boolean inventory = true;
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public boolean containers = true;
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public boolean pauseScreen = false;
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public boolean allScreens = false;
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public List<String> seenScreens = new ArrayList<>();
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public List<String> enabledScreens = defaultEnabledScreens();
-
-    @ConfigEntry.Category("screens")
-    @ConfigEntry.Gui.Tooltip
-    public List<String> disabledScreens = new ArrayList<>();
+    public static class StringControllerFactory implements ListGroup.ControllerFactory<String> {
+        @Override
+        public ControllerBuilder<String> createController(ListGroup annotation, ConfigField<List<String>> field, OptionAccess storage, Option<String> option) {
+            return StringControllerBuilder.create(option);
+        }
+    }
 
     private static List<String> defaultEnabledScreens() {
         String pkg = "net.minecraft.client.gui.screens.inventory.";
@@ -180,262 +576,11 @@ public class SpatialGUIConfig implements ConfigData {
         return list;
     }
 
-    // rendering
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 25, max = 100)
-    public int renderScalePercent = 100;
-
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.CollapsibleObject
-    public FirstPersonHands firstPersonHands = new FirstPersonHands();
-
-    public static class FirstPersonHands {
-        @ConfigEntry.Category("rendering")
-        @ConfigEntry.Gui.Tooltip
-        public boolean hideHandsInFirstPerson = false;
-
-        @ConfigEntry.Category("rendering")
-        @ConfigEntry.Gui.Tooltip
-        public boolean hideShieldInFirstPerson = true;
-
-        @ConfigEntry.Category("rendering")
-        @ConfigEntry.Gui.Tooltip
-        public boolean swingArmOnFirstPersonClick = false;
+    private static java.nio.file.Path configDir() {
+        //? if fabric {
+        return FabricLoader.getInstance().getConfigDir();
+        //?} else {
+        /*return FMLPaths.CONFIGDIR.get();
+         *///?}
     }
-
-    //? if >=26.1.2 {
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.Tooltip
-    public boolean blurWorldBackground = false;
-
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 1, max = 10)
-    public int worldBlurStrength = 5;
-    //?}
-
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 255)
-    public int screenAlpha = 255;
-
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.CollapsibleObject
-    public Filtering filtering = new Filtering();
-
-    public static class Filtering {
-        @ConfigEntry.Gui.Tooltip
-        public boolean useLinearFiltering = true;
-
-        @ConfigEntry.Gui.Tooltip
-        public boolean useAnisotropicFiltering = true;
-    }
-
-    @ConfigEntry.Category("rendering")
-    @ConfigEntry.Gui.Tooltip
-    public double recipeBookShrinkFactor = 1.5;
-
-    // thirdPersonScreen
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenDistance = 2.5;
-
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenSideOffset = -0.6;
-
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenHeightOffset = -0.4;
-
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenYawOffset = 160.0;
-
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenPitchOffset = 0.0;
-
-    @ConfigEntry.Category("thirdPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double screenScale = 3.5;
-
-    // firstPersonScreen
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public boolean curvedScreenEnabled = false;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 5, max = 150)
-    public int curvedScreenArcDegrees = 30;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenDistance = 1.5;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenSideOffset = 0.0;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenHeightOffset = 0.0;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenYawOffset = 180.0;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenPitchOffset = 0.0;
-
-    @ConfigEntry.Category("firstPersonScreen")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonScreenScale = 1.8;
-
-    // thirdPersonCamera
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double cameraDistance = 1.7;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double cameraSideOffset = -1.2;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double cameraHeightOffset = 1.5;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double cameraTargetPitch = 10.0;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double thirdPersonMouseSensitivityYaw = 0.1;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double thirdPersonMouseSensitivityPitch = 0.03;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean fallbackToFirstPersonOnBlockCollision = false;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean disableThirdPersonParallax = false;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean lerpCameraPitch = true;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double avatarBaseYawOffset = 30.0;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double avatarBodyRotationOffset = 20.0;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean mirrorHeadMovement = false;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 1, max = 5000)
-    public int transitionDurationMs = 300;
-
-    @ConfigEntry.Category("thirdPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 100)
-    public int transitionSkipPercentage = 15;
-
-    // firstPersonCamera
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean keepFirstPersonCameraAngle = true;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean inheritScreenOriginOnSwap = true;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonMouseSensitivityYaw = 0.4;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public double firstPersonMouseSensitivityPitch = 0.12;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 90)
-    public int firstPersonPitchClamp = 40;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean lockFirstPersonYaw = false;
-
-    @ConfigEntry.Category("firstPersonCamera")
-    @ConfigEntry.Gui.Tooltip
-    public boolean disableFirstPersonParallax = false;
-
-    // animations
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    public boolean enableFadeAnimation = true;
-
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 1000)
-    public int fadeDurationMs = 150;
-
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    public boolean enableScaleAnimation = true;
-
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 50, max = 1000)
-    public int openAnimationDurationMs = 300;
-
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-    public EasingType animationEasing = EasingType.Back;
-
-    public enum EasingType {
-        Cubic,
-        Elastic,
-        Bounce,
-        Back,
-        Exponential,
-        Quadratic,
-        Quartic
-    }
-
-    @ConfigEntry.Category("animations")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 1, max = 100)
-    public int animationStartScalePercent = 75;
-
-    // fov
-    @ConfigEntry.Category("fov")
-    @ConfigEntry.Gui.Tooltip
-    public boolean overrideFov = false;
-
-    @ConfigEntry.Category("fov")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 30, max = 110)
-    public int targetFov = 70;
-
-    @ConfigEntry.Category("fov")
-    @ConfigEntry.Gui.Tooltip
-    @ConfigEntry.BoundedDiscrete(min = 0, max = 50)
-    public int fovLerpSpeed = 10;
-
 }

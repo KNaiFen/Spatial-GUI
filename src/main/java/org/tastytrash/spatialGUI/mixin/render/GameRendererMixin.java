@@ -300,7 +300,7 @@ public abstract class GameRendererMixin {
             renderer.renderInWorldPost();
             renderer.clearTarget();
 
-            if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.firstPersonHands.hideHandsInFirstPerson) {
+            if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.hideHandsInFirstPerson) {
                 spatialGUI$renderHandsInFront();
             }
 
@@ -487,7 +487,7 @@ public abstract class GameRendererMixin {
             renderer.renderInWorldPost();
             renderer.clearTarget();
 
-            if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.firstPersonHands.hideHandsInFirstPerson) {
+            if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.hideHandsInFirstPerson) {
                 spatialGUI$renderHandsInFront();
             }
 
@@ -708,7 +708,7 @@ public class GameRendererMixin {
         var renderer = SpatialGUIClient.renderer();
         if (renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
             renderer.renderInWorldPost();
-            if (SpatialGUIClient.getEffectiveFirstPersonMode() && SpatialGUI.config.firstPersonHands.hideHandsInFirstPerson) {
+            if (SpatialGUIClient.getEffectiveFirstPersonMode() && SpatialGUI.config.hideHandsInFirstPerson) {
                 ci.cancel();
             }
         }

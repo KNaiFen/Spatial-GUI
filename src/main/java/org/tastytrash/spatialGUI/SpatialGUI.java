@@ -1,8 +1,5 @@
 package org.tastytrash.spatialGUI;
 
-import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
-
 import org.tastytrash.spatialGUI.client.SpatialGUIConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +46,7 @@ public class SpatialGUI {
         initCommon();
         container.registerExtensionPoint(
                 IConfigScreenFactory.class,
-                (modContainer, parentScreen) -> me.shedaniel.autoconfig.AutoConfigClient.getConfigScreen(SpatialGUIConfig.class, parentScreen).get()
+                (modContainer, parentScreen) -> SpatialGUIConfig.HANDLER.generateGui().generateScreen(parentScreen)
         );
         new org.tastytrash.spatialGUI.client.SpatialGUIClient(modBus);
     }
@@ -59,7 +56,7 @@ public class SpatialGUI {
         ModLoadingContext.get().registerExtensionPoint(
                 ConfigScreenHandler.ConfigScreenFactory.class,
                 () -> new ConfigScreenHandler.ConfigScreenFactory(
-                        (mc, parent) -> me.shedaniel.autoconfig.AutoConfigClient.getConfigScreen(SpatialGUIConfig.class, parent).get())
+                        (mc, parent) -> SpatialGUIConfig.HANDLER.generateGui().generateScreen(parent))
         );
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> org.tastytrash.spatialGUI.client.SpatialGUIClient::new);
     }
@@ -67,7 +64,7 @@ public class SpatialGUI {
 
     public static void initCommon() {
         LOGGER.info("Initializing Spatial GUI");
-        AutoConfig.register(SpatialGUIConfig.class, GsonConfigSerializer::new);
-        config = AutoConfig.getConfigHolder(SpatialGUIConfig.class).getConfig();
+        SpatialGUIConfig.HANDLER.load();
+        config = SpatialGUIConfig.get();
     }
 }

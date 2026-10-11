@@ -82,7 +82,7 @@ public class CameraUtil {
         if (!SpatialGUI.config.autoScaleByFov) return 1.0f;
 
         float currentFov = getCurrentFov();
-        float baselineFov = (float) SpatialGUI.config.autoFovTuning.autoScaleBaselineFov;
+        float baselineFov = (float) SpatialGUI.config.autoScaleBaselineFov;
 
         return currentFov / baselineFov;
     }
@@ -91,7 +91,7 @@ public class CameraUtil {
         if (isFirstPerson) return 0.0f;
         
         float fovMultiplier = calculateFovMultiplier();
-        float distanceMultiplier = (float) SpatialGUI.config.autoFovTuning.autoScaleDistanceMultiplier;
+        float distanceMultiplier = (float) SpatialGUI.config.autoScaleDistanceMultiplier;
         float fovAdjustment = (1.0f / fovMultiplier) - 1.0f;
         float distanceFovAdjustment = fovAdjustment * distanceMultiplier;
         
@@ -102,7 +102,7 @@ public class CameraUtil {
         if (isFirstPerson) return 0.0f;
         
         float fovMultiplier = calculateFovMultiplier();
-        float sideOffsetMultiplier = (float) SpatialGUI.config.autoFovTuning.autoScaleSideOffsetMultiplier;
+        float sideOffsetMultiplier = (float) SpatialGUI.config.autoScaleSideOffsetMultiplier;
         float fovAdjustment = (1.0f / fovMultiplier) - 1.0f;
         float sideOffsetFovAdjustment = fovAdjustment * sideOffsetMultiplier;
         

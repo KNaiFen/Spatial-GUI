@@ -13,7 +13,7 @@ import org.tastytrash.spatialGUI.client.SpatialGUIClient;import org.tastytrash.s
 public class DebugScreenOverlayMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void spatialGUI$hideDebugOverlay(CallbackInfo ci) {
-        if (SpatialGUIClient.isEnabled() && SpatialGUI.config.hudOptions.hideHud
+        if (SpatialGUIClient.isEnabled() && SpatialGUI.config.hideHud
                 && SpatialGUIClient.renderer() != null
                 && SpatialGUIClient.renderer().getHookedScreen() != null) {
             ci.cancel();

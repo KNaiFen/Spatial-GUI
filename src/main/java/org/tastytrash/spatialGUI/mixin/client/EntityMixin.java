@@ -23,7 +23,7 @@ public abstract class EntityMixin {
                 || !SpatialGUIClient.isEnabled()
                 || !SpatialGUIClient.getEffectiveFirstPersonMode()
                 || renderer.getHookedScreen() == null
-                || SpatialGUI.config.firstPersonHands.hideHandsInFirstPerson) {
+                || SpatialGUI.config.hideHandsInFirstPerson) {
             return original;
         }
 
