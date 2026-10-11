@@ -34,8 +34,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 //? if fabric {
  public class SpatialGUIClient implements ClientModInitializer {
 //? } else if neoforge{
-/*@Mod(value = SpatialGUI.MOD_ID, dist = Dist.CLIENT)
-public class SpatialGUIClient {
+/*public class SpatialGUIClient {
 *///?} else if forge {
 /*@Mod(value = SpatialGUI.MOD_ID)
 public class SpatialGUIClient {
@@ -51,6 +50,7 @@ public class SpatialGUIClient {
     //? if fabric {
     @Override
     public void onInitializeClient() {
+        SpatialGUI.initCommon();
         renderer = new SpatialGUIRenderer();
         SpatialGUIKeybinds.register();
 
@@ -134,7 +134,12 @@ public class SpatialGUIClient {
         if (id.contains("ChatScreen")) return false;
 
         if (!id.contains("$") && !SpatialGUI.config.seenScreens.contains(id)) {
-            SpatialGUI.config.seenScreens.add(id);
+            try {
+                SpatialGUI.config.seenScreens.add(id);
+            } catch (UnsupportedOperationException e) {
+                SpatialGUI.config.seenScreens = new java.util.ArrayList<>(SpatialGUI.config.seenScreens);
+                SpatialGUI.config.seenScreens.add(id);
+            }
         }
 
         if (SpatialGUI.config.disabledScreens.contains(id)) return false;

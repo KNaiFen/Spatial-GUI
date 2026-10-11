@@ -17,9 +17,6 @@
     "client": [
       "org.tastytrash.spatialGUI.client.SpatialGUIClient"
     ],
-    "main": [
-      "org.tastytrash.spatialGUI.SpatialGUI"
-    ],
     "modmenu": [
       "org.tastytrash.spatialGUI.client.SpatialGUIModMenu"
     ]
