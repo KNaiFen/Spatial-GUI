@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import org.tastytrash.spatialGUI.util.RenderUtil.QuadBasis;
 import org.tastytrash.spatialGUI.util.RenderUtil.CylinderBasis;
@@ -129,7 +130,7 @@ public class InventoryRenderer {
         //? if >=26.2 {
         /*pitch = Math.clamp(pitch, -pitchClamp, pitchClamp);
          *///?} else {
-        pitch = Math.max(-pitchClamp, Math.min(pitch, pitchClamp));
+        pitch = Mth.clamp(pitch, -pitchClamp, pitchClamp);
         //?}
         float yawRadians = (float) Math.toRadians(yaw);
         float pitchRadians = (float) Math.toRadians(pitch);

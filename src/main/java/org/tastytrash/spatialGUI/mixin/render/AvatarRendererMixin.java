@@ -15,80 +15,6 @@ import net.minecraft.world.entity.Avatar;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-@Mixin(AvatarRenderer.class)
-public class AvatarRendererMixin {
-    @Unique private static float smoothedHeadYaw = 0f;
-    @Unique private static float smoothedHeadPitch = 0f;
-
-    @Unique private static final float MAX_YAW_OFFSET = 40f;
-    @Unique private static final float MAX_PITCH_OFFSET = 25f;
-    @Unique private static final float SMOOTHING = 0.15f;
-
-    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
-    private void spatialGUI$overrideHeadLook(Avatar entity, AvatarRenderState state, float partialTicks, CallbackInfo ci) {
-        Minecraft client = Minecraft.getInstance();
-        var renderer = SpatialGUIClient.renderer();
-
-        boolean closing = renderer.isClosing() && !renderer.isClosingFirstPerson();
-
-        if (entity != client.player || !(renderer.shouldCapture() || closing) || !SpatialGUIClient.isEnabled()) {
-            renderer.headLockInitialized = false;
-            smoothedHeadYaw = 0f;
-            smoothedHeadPitch = 0f;
-            return;
-        }
-
-        float vanillaBodyRot = state.bodyRot;
-        float vanillaYRot = state.yRot;
-        float vanillaXRot = state.xRot;
-
-        boolean justOpened = !renderer.headLockInitialized;
-
-        double mouseX = ((MouseHandlerAccessor) client.mouseHandler).getRawXpos();
-        double mouseY = ((MouseHandlerAccessor) client.mouseHandler).getRawYpos();
-        int width = client.getWindow().getScreenWidth();
-        int height = client.getWindow().getScreenHeight();
-
-        float normX = Math.clamp((float) (mouseX / width) * 2f - 1f, -1f, 1f);
-        float normY = Math.clamp((float) (mouseY / height) * 2f - 1f, -1f, 1f);
-
-        if (SpatialGUI.config.mirrorHeadMovement) { normX = -normX; }
-
-        float bodyRotationOffset = (float) SpatialGUI.config.avatarBodyRotationOffset;
-        if (SpatialGUI.config.mirrorThirdPerson) {
-            bodyRotationOffset = -bodyRotationOffset;
-        }
-        state.bodyRot = client.player.getYRot() + bodyRotationOffset;
-
-        float baseYawOffset = (float) SpatialGUI.config.avatarBaseYawOffset;
-        if (SpatialGUI.config.mirrorThirdPerson) {
-            baseYawOffset = -baseYawOffset;
-        }
-
-        float targetYaw = normX * MAX_YAW_OFFSET + baseYawOffset;
-        float targetPitch = Mth.clamp(normY * MAX_PITCH_OFFSET, -60f, 60f);
-
-        if (justOpened) {
-            smoothedHeadYaw = targetYaw;
-            smoothedHeadPitch = targetPitch;
-            renderer.headLockInitialized = true;
-        } else {
-            smoothedHeadYaw = Mth.rotLerp(SMOOTHING, smoothedHeadYaw, targetYaw);
-            smoothedHeadPitch = Mth.lerp(SMOOTHING, smoothedHeadPitch, targetPitch);
-        }
-
-        state.yRot = smoothedHeadYaw;
-        state.xRot = smoothedHeadPitch;
-
-        if (closing) {
-            float blend = renderer.getCloseBlend();
-            state.bodyRot = Mth.rotLerp(blend, state.bodyRot, vanillaBodyRot);
-            state.yRot = Mth.rotLerp(blend, state.yRot, vanillaYRot);
-            state.xRot = Mth.lerp(blend, state.xRot, vanillaXRot);
-        }
-    }
-}
 //?} else {
 /*import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -97,85 +23,110 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import org.tastytrash.spatialGUI.render.SpatialGUIRenderer;
+*///?}
 
-@Mixin(PlayerRenderer.class)
+//? if >1.21.1 {
+@Mixin(AvatarRenderer.class)
+//?} else {
+/*@Mixin(PlayerRenderer.class)
+ *///?}
 public class AvatarRendererMixin {
-    @Unique private static float smoothedHeadYaw = 0f;
-    @Unique private static float smoothedHeadPitch = 0f;
-
-    @Unique private static final float MAX_YAW_OFFSET = 40f;
-    @Unique private static final float MAX_PITCH_OFFSET = 25f;
     @Unique private static final float SMOOTHING = 0.15f;
 
-    @WrapMethod(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
-    private void spatialGUI$overrideHeadLook(AbstractClientPlayer entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight, Operation<Void> original) {
+    @Unique private static float smoothedYaw, smoothedPitch;
+    @Unique private static float shownBody, shownYaw, shownPitch;
+    @Unique private static long openStartNanos;
+
+    @Unique
+    private static float[] spatialGUI$computePose(float vanillaBody, float vanillaYaw, float vanillaPitch) {
         Minecraft client = Minecraft.getInstance();
         var renderer = SpatialGUIClient.renderer();
-
         boolean closing = renderer.isClosing() && !renderer.isClosingFirstPerson();
 
-        if (entity != client.player || !(renderer.shouldCapture() || closing) || !SpatialGUIClient.isEnabled()) {
+        if (!(renderer.shouldCapture() || closing) || !SpatialGUIClient.isEnabled()) {
             renderer.headLockInitialized = false;
-            smoothedHeadYaw = 0f;
-            smoothedHeadPitch = 0f;
-            return;
+            return null;
         }
 
-        float vanillaBodyRot = state.bodyRot;
-        float vanillaYRot = state.yRot;
-        float vanillaXRot = state.xRot;
+        if (closing) {
+            float blend = renderer.getCloseBlend();
+            return new float[] {
+                    Mth.rotLerp(blend, shownBody, vanillaBody),
+                    Mth.rotLerp(blend, shownYaw, vanillaYaw),
+                    Mth.lerp(blend, shownPitch, vanillaPitch)
+            };
+        }
 
-        if (SpatialGUIRenderer.isExtractingScreen) {
+        var mouse = (MouseHandlerAccessor) client.mouseHandler;
+        float normX = Mth.clamp((float) (mouse.getRawXpos() / client.getWindow().getScreenWidth()) * 2f - 1f, -1f, 1f);
+        float normY = Mth.clamp((float) (mouse.getRawYpos() / client.getWindow().getScreenHeight()) * 2f - 1f, -1f, 1f);
+        if (SpatialGUI.config.mirrorHeadMovement) normX = -normX;
+
+        float side = SpatialGUI.config.mirrorThirdPerson ? -1f : 1f;
+        float targetBody = client.player.getYRot() + side * (float) SpatialGUI.config.avatarBodyRotationOffset;
+        float targetYaw = normX * (float) SpatialGUI.config.avatarMaxYawOffset + side * (float) SpatialGUI.config.avatarBaseYawOffset;
+        float targetPitch = Mth.clamp(normY * (float) SpatialGUI.config.avatarMaxPitchOffset, -60f, 60f);
+
+        long now = System.nanoTime();
+        boolean justOpened = !renderer.headLockInitialized;
+
+        if (justOpened) {
+            smoothedYaw = targetYaw;
+            smoothedPitch = targetPitch;
+            openStartNanos = now;
+            renderer.headLockInitialized = true;
+        } else {
+            smoothedYaw = Mth.rotLerp(SMOOTHING, smoothedYaw, targetYaw);
+            smoothedPitch = Mth.lerp(SMOOTHING, smoothedPitch, targetPitch);
+        }
+
+        float t = Mth.clamp((now - openStartNanos) / 1000000f / SpatialGUI.config.openAnimationDurationMs, 0f, 1f);
+        float open = 1f - (1f - t) * (1f - t) * (1f - t);
+
+        shownBody = Mth.rotLerp(open, vanillaBody, targetBody);
+        shownYaw = Mth.rotLerp(open, vanillaYaw, smoothedYaw);
+        shownPitch = Mth.lerp(open, vanillaPitch, smoothedPitch);
+        return new float[] {shownBody, shownYaw, shownPitch};
+    }
+
+    //? if >1.21.1 {
+    @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
+    private void spatialGUI$overrideHeadLook(Avatar entity, AvatarRenderState state, float partialTicks, CallbackInfo ci) {
+        if (entity != Minecraft.getInstance().player) return;
+
+        float[] pose = spatialGUI$computePose(state.bodyRot, state.yRot, state.xRot);
+        if (pose == null) return;
+
+        state.bodyRot = pose[0];
+        state.yRot = pose[1];
+        state.xRot = pose[2];
+    }
+//?} else {
+    /*@WrapMethod(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
+    private void spatialGUI$overrideHeadLook(AbstractClientPlayer entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight, Operation<Void> original) {
+        if (entity != Minecraft.getInstance().player || SpatialGUIRenderer.isExtractingScreen) {
             original.call(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
             return;
         }
 
-        boolean justOpened = !renderer.headLockInitialized;
+        float vanillaBody = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
+        float vanillaHead = Mth.rotLerp(partialTicks, entity.yHeadRotO, entity.yHeadRot);
+        float vanillaPitch = Mth.lerp(partialTicks, entity.xRotO, entity.getXRot());
 
-        double mouseX = ((MouseHandlerAccessor) client.mouseHandler).getRawXpos();
-        double mouseY = ((MouseHandlerAccessor) client.mouseHandler).getRawYpos();
-        int width = client.getWindow().getScreenWidth();
-        int height = client.getWindow().getScreenHeight();
-
-        float normX = Math.max(-1f, Math.min(1f, (float) mouseX / width * 2f - 1f));
-        float normY = Math.max(-1f, Math.min(1f, (float) mouseY / height * 2f - 1f));
-
-        if (SpatialGUI.config.mirrorHeadMovement) { normX = -normX; }
-
-        float bodyRotationOffset = (float) SpatialGUI.config.avatarBodyRotationOffset;
-        if (SpatialGUI.config.mirrorThirdPerson) {
-            bodyRotationOffset = -bodyRotationOffset;
-        }
-        float bodyRot = client.player.getYRot() + bodyRotationOffset;
-
-        float baseYawOffset = (float) SpatialGUI.config.avatarBaseYawOffset;
-        if (SpatialGUI.config.mirrorThirdPerson) {
-            baseYawOffset = -baseYawOffset;
-        }
-
-        float targetYaw = normX * MAX_YAW_OFFSET + baseYawOffset;
-        float targetPitch = Mth.clamp(normY * MAX_PITCH_OFFSET, -60f, 60f);
-
-        if (justOpened) {
-            smoothedHeadYaw = targetYaw;
-            smoothedHeadPitch = targetPitch;
-            renderer.headLockInitialized = true;
-        } else {
-            smoothedHeadYaw = Mth.rotLerp(SMOOTHING, smoothedHeadYaw, targetYaw);
-            smoothedHeadPitch = Mth.lerp(SMOOTHING, smoothedHeadPitch, targetPitch);
+        float[] pose = spatialGUI$computePose(vanillaBody, Mth.wrapDegrees(vanillaHead - vanillaBody), vanillaPitch);
+        if (pose == null) {
+            original.call(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
+            return;
         }
 
         float oldBody = entity.yBodyRot, oldBodyO = entity.yBodyRotO;
         float oldHead = entity.yHeadRot, oldHeadO = entity.yHeadRotO;
         float oldXRot = entity.getXRot(), oldXRotO = entity.xRotO;
 
-        float headRot = bodyRot + smoothedHeadYaw;
-        entity.yBodyRot = bodyRot;
-        entity.yBodyRotO = bodyRot;
-        entity.yHeadRot = headRot;
-        entity.yHeadRotO = headRot;
-        entity.setXRot(smoothedHeadPitch);
-        entity.xRotO = smoothedHeadPitch;
+        entity.yBodyRot = entity.yBodyRotO = pose[0];
+        entity.yHeadRot = entity.yHeadRotO = pose[0] + pose[1];
+        entity.setXRot(pose[2]);
+        entity.xRotO = pose[2];
 
         try {
             original.call(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
@@ -187,13 +138,6 @@ public class AvatarRendererMixin {
             entity.setXRot(oldXRot);
             entity.xRotO = oldXRotO;
         }
-
-        if (closing) {
-            float blend = renderer.getCloseBlend();
-            state.bodyRot = Mth.rotLerp(blend, state.bodyRot, vanillaBodyRot);
-            state.yRot = Mth.rotLerp(blend, state.yRot, vanillaYRot);
-            state.xRot = Mth.lerp(blend, state.xRot, vanillaXRot);
-        }
     }
+    *///?}
 }
-*///?}

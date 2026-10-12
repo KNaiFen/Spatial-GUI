@@ -8,6 +8,7 @@ import dev.isxander.yacl3.config.v2.api.ConfigField;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.autogen.*;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
+import net.minecraft.util.Mth;
 //? if fabric {
 import net.fabricmc.loader.api.FabricLoader;
 //?} else if neoforge {
@@ -276,6 +277,16 @@ public class SpatialGUIConfig {
     @DoubleSlider(min = -180.0, max = 180.0, step = 1.0)
     public double avatarBodyRotationOffset = 20.0;
 
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @IntSlider(min = 0, max = 90, step = 1)
+    public int avatarMaxYawOffset = 40;
+
+    @SerialEntry
+    @AutoGen(category = "thirdPerson", group = "avatar")
+    @IntSlider(min = 0, max = 90, step = 1)
+    public int avatarMaxPitchOffset = 25;
+
     // controls 
     @SerialEntry
     @AutoGen(category = "thirdPerson", group = "controls")
@@ -296,7 +307,7 @@ public class SpatialGUIConfig {
     @SerialEntry
     @AutoGen(category = "thirdPerson", group = "transition")
     @IntSlider(min = 0, max = 100, step = 1)
-    public int transitionSkipPercentage = 15;
+    public int transitionSkipPercentage = 0;
 
     // ===========
     // firstPerson
@@ -523,7 +534,7 @@ public class SpatialGUIConfig {
         if (autoCalculateGuiScale) {
             return calculateAutoGuiScale(windowWidth, windowHeight);
         }
-        int clampedGuiScale = Math.max(1, Math.min(guiScale, 6));
+        int clampedGuiScale = Mth.clamp(guiScale, 1, 6);
         int autoScale = calculateAutoGuiScale(windowWidth, windowHeight);
         int relativeScale = Math.round(clampedGuiScale * (autoScale / 4.0f));
         return Math.max(1, relativeScale);
@@ -533,7 +544,7 @@ public class SpatialGUIConfig {
         if (autoCalculateGuiScale) {
             return calculateAutoGuiScale(windowHeight);
         }
-        int clampedGuiScale = Math.max(1, Math.min(guiScale, 6));
+        int clampedGuiScale = Mth.clamp(guiScale, 1, 6);
         int autoScale = calculateAutoGuiScale(windowHeight);
         int relativeScale = Math.round(clampedGuiScale * (autoScale / 4.0f));
         return Math.max(1, relativeScale);

@@ -261,8 +261,8 @@ public final class RenderUtil {
             return null;
         }
 
-        float clampedU = Math.max(0.0f, Math.min(1.0f, u));
-        float clampedV = Math.max(0.0f, Math.min(1.0f, v));
+        float clampedU = Mth.clamp(u, 0.0f, 1.0f);
+        float clampedV = Mth.clamp(v, 0.0f, 1.0f);
 
         int targetWidth = mc.getWindow().getWidth();
         int targetHeight = mc.getWindow().getHeight();
@@ -395,8 +395,8 @@ public final class RenderUtil {
             return null;
         }
 
-        float clampedU = Math.max(0.0f, Math.min(1.0f, u));
-        float clampedV = Math.max(0.0f, Math.min(1.0f, v));
+        float clampedU = Mth.clamp(u, 0.0f, 1.0f);
+        float clampedV = Mth.clamp(v, 0.0f, 1.0f);
 
         int targetWidth = mc.getWindow().getWidth();
         int targetHeight = mc.getWindow().getHeight();
