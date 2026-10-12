@@ -30,7 +30,7 @@ public class LevelRendererMixin {
              *///?}
     ) {
         var renderer = SpatialGUIClient.renderer();
-        if (!SpatialGUIClient.isEnabled() || renderer == null || !renderer.shouldCapture()) {
+        if (!SpatialGUIClient.isEnabled() || renderer == null || !(renderer.shouldCapture() || renderer.isClosing())) {
             return;
         }
 
@@ -49,9 +49,7 @@ public class LevelRendererMixin {
         //?} else if >1.20.1 {
         /*poseStack.mulPose(modelViewMatrix);
          *///?} else {
-        /*// 1.20.1: the only Matrix4f arg to renderLevel is the projection matrix,
-        // so rebuild the camera rotation from the Camera instead.
-        var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        /*var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         poseStack.mulPose(new Quaternionf()
                 .rotateX((float) Math.toRadians(camera.xRot()))
                 .rotateY((float) Math.toRadians(camera.yRot() + 180.0f))

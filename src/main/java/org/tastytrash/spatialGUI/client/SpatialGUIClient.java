@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.*;
+import net.minecraft.world.phys.Vec3;
 import org.tastytrash.spatialGUI.compat.VisorCompat;
 import org.tastytrash.spatialGUI.render.SpatialGUIRenderer;
 import org.tastytrash.spatialGUI.SpatialGUI;
@@ -46,6 +47,9 @@ public class SpatialGUIClient {
     private static boolean wasThirdPersonCamera = false;
     private static float cameraYawOffset = 0f;
     private static boolean capturingPanorama = false;
+    private static Vec3 cameraPosition;
+    private static boolean wasClosing = false;
+
 
     //? if fabric {
     @Override
@@ -213,4 +217,20 @@ public class SpatialGUIClient {
     public static void setCapturingPanorama(boolean value) {
         capturingPanorama = value;
     }
-}
+
+    public static Vec3 getCameraPosition() {
+        return cameraPosition;
+    }
+
+    public static void setCameraPosition(Vec3 position) {
+        cameraPosition = position;
+    }
+
+    public static boolean getWasClosing() {
+        return wasClosing;
+    }
+
+    public static void setWasClosing(boolean value) {
+        wasClosing = value;
+    }
+ }

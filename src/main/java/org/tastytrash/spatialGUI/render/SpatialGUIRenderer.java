@@ -13,7 +13,7 @@ import org.tastytrash.spatialGUI.mixin.gui.MouseHandlerAccessor;
 import org.tastytrash.spatialGUI.util.RenderUtil;
 
 //? if fabric {
- import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 //? } else if neoforge {
 /*import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -23,7 +23,7 @@ import net.minecraftforge.common.MinecraftForge;
 *///?}
 //? if >26.2 {
 /*import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
-*///?} else if >1.21.1 {
+ *///?} else if >1.21.1 {
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //?}
 
@@ -79,7 +79,7 @@ public class SpatialGUIRenderer {
         //?}
 
 
-        if (hookedScreen != null) onScreenRemoved();
+        if (hookedScreen != null) onScreenRemoved(false);
 
         if (!SpatialGUIClient.isEnabled()) {
             return;
@@ -92,6 +92,9 @@ public class SpatialGUIRenderer {
         if (screen != client.screen) return;
         //?}
 
+        if (inventoryRenderer.isClosing()) {
+            finishClosing();
+        }
         pendingCameraSnap = false;
 
         skipWindowOverride = false;
@@ -115,7 +118,7 @@ public class SpatialGUIRenderer {
         ScreenEvents.afterExtract(screen).register((screenArg, extractor, mouseX, mouseY, tickDelta) -> prepareTarget());
         //?} else if fabric {
         /*ScreenEvents.afterRender(screen).register((screenArg, graphics, mouseX, mouseY, tickDelta) -> prepareTarget());
-        *///?}
+         *///?}
 
         //? if fabric {
         ScreenEvents.remove(screen).register(removedScreen -> {
@@ -144,13 +147,23 @@ public class SpatialGUIRenderer {
     *///? }
 
     private void onScreenRemoved() {
+        onScreenRemoved(true);
+    }
+
+    private void onScreenRemoved(boolean animate) {
         if (hookedScreen == null) return;
         skipWindowOverride = false;
         var player = Minecraft.getInstance().player;
         boolean wasEffectiveFirstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
         MouseHandlerUtil.releaseMouseFromFirstPerson();
-        inventoryRenderer.resetRecipeBookState();
-        inventoryRenderer.resetPerspectiveState();
+        boolean startClosing = animate
+                && SpatialGUI.config.enableCloseAnimation
+                && Minecraft.getInstance().level != null
+                && inventoryRenderer.beginClosing();
+        if (!startClosing) {
+            inventoryRenderer.resetRecipeBookState();
+            inventoryRenderer.resetPerspectiveState();
+        }
         hookedScreen = null;
         isInventoryScreen = false;
         headLockInitialized = false;
@@ -203,6 +216,40 @@ public class SpatialGUIRenderer {
         }
     }
 
+
+    private void finishClosing() {
+        if (!inventoryRenderer.isClosing()) return;
+        inventoryRenderer.endClosing();
+        inventoryRenderer.resetRecipeBookState();
+        inventoryRenderer.resetPerspectiveState();
+        targetManager.clearTarget();
+    }
+
+    public boolean isClosing() {
+        return inventoryRenderer.isClosing();
+    }
+
+    public boolean isClosingFirstPerson() {
+        return inventoryRenderer.isClosing() && inventoryRenderer.isClosingFirstPerson();
+    }
+
+    public boolean isClosingThirdToFirstPerson() {
+        return inventoryRenderer.isClosing()
+                && !inventoryRenderer.isClosingFirstPerson()
+                && !SpatialGUI.config.autoDetectCameraMode
+                && !SpatialGUIClient.getWasThirdPersonCamera();
+    }
+
+    public long getCloseElapsedMs() {
+        return inventoryRenderer.getCloseElapsedMs();
+    }
+
+    public float getCloseBlend() {
+        float duration = Math.max(1, SpatialGUI.config.transitionDurationMs);
+        float skipFraction = SpatialGUI.config.transitionSkipPercentage / 100.0f;
+        float openProgress = Math.max(skipFraction, 1.0f - inventoryRenderer.getCloseElapsedMs() / duration);
+        return 1.0f - org.tastytrash.spatialGUI.util.AnimationUtil.easeInOutSine(openProgress);
+    }
 
     public void clearTarget() {
         targetManager.clearTarget();
@@ -265,7 +312,7 @@ public class SpatialGUIRenderer {
         Minecraft client = Minecraft.getInstance();
         //? if >=26.2 {
         /*boolean bool = SpatialGUIClient.shouldHookScreen(hookedScreen) && hookedScreen == client.screen;
-        *///?} else {
+         *///?} else {
         boolean bool = SpatialGUIClient.shouldHookScreen(hookedScreen) && hookedScreen == client.screen;
         //?}
         if (!bool) {
@@ -359,6 +406,9 @@ public class SpatialGUIRenderer {
         Screen screen = mc.screen;
         //?}
         if (hookedScreen != null && screen != hookedScreen) onScreenRemoved();
+        if (inventoryRenderer.isClosing() && (mc.level == null || inventoryRenderer.isCloseFinished())) {
+            finishClosing();
+        }
         MouseHandlerUtil.syncCursorGrab();
         updateFovProgress();
     }

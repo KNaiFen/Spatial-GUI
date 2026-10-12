@@ -49,6 +49,10 @@ public abstract class CameraMixin {
     @Unique private static float freeLookYaw = 0f, freeLookPitch = 0f;
     @Unique private static boolean wasCrosshairMode;
 
+    @Unique private static Vec3 lastOffset;
+    @Unique private static float lastYRot, lastXRot;
+    @Unique private static boolean closingCameraActive;
+
     @Unique
     private record CameraTransform(Vec3 pos, float yaw, float pitch) {}
 
@@ -66,7 +70,7 @@ public abstract class CameraMixin {
     //? if >=26.1.2 {
     @Inject(method = "alignWithEntity", at = @At("TAIL"))
     private void spatialGUI$modifyCamera(float partialTicks, CallbackInfo ci) {
-    //?} else if >1.21.1 {
+        //?} else if >1.21.1 {
     /*@Inject(method = "setup", at = @At("TAIL"))
     private void spatialGUI$modifyCamera(net.minecraft.world.level.Level level, Entity entity, boolean detached, boolean thirdPersonReverse, float partialTicks, CallbackInfo ci) {
     *///?} else {
@@ -77,6 +81,8 @@ public abstract class CameraMixin {
         boolean isCapturing = renderer.shouldCapture();
 
         if (isCapturing && this.entity != null && SpatialGUIClient.isEnabled()) {
+            boolean resumedFromClosing = closingCameraActive;
+            closingCameraActive = false;
             TRANSITION_DURATION_MS = SpatialGUI.config.transitionDurationMs;
             boolean isFirstPerson = SpatialGUIClient.shouldUseFirstPersonMode(renderer.getHookedScreen());
             SpatialGUIClient.setEffectiveFirstPersonMode(isFirstPerson);
@@ -102,14 +108,33 @@ public abstract class CameraMixin {
             float newTargetYRot = transform.yaw();
             float newTargetXRot = transform.pitch();
 
-            if (!wasCapturing || !isTransitioning) {
+            if (!wasCapturing || !isTransitioning || resumedFromClosing) {
                 this.startTransition(renderer, newTargetYRot, newTargetXRot, isFirstPerson);
             }
             SpatialGUIClient.setCameraYawOffset(smoothedCameraYaw);
 
             this.applyCameraUpdate(newTargetPos, newTargetYRot, newTargetXRot, isFirstPerson);
+            lastOffset = position.subtract(MathUtil.lerpEntityPosition(this.entity, partialTicks));
+            lastYRot = yRot;
+            lastXRot = xRot;
             this.rotation.rotationYXZ((float) Math.PI - this.yRot * ((float) Math.PI / 180F), -this.xRot * ((float) Math.PI / 180F), 0.0F);
             wasCapturing = true;
+        } else if (renderer.isClosing() && !renderer.isClosingFirstPerson() && lastOffset != null && this.entity != null && SpatialGUIClient.isEnabled()) {
+            closingCameraActive = true;
+            SpatialGUIClient.setWasClosing(true);
+            float easedProgress = renderer.getCloseBlend();
+
+            Vec3 screenCameraPos = MathUtil.lerpEntityPosition(this.entity, partialTicks).add(lastOffset);
+            boolean toFirstPerson = renderer.isClosingThirdToFirstPerson();
+            Vec3 normalPos = toFirstPerson ? MathUtil.lerpEntityPosition(this.entity, partialTicks).add(0.0, this.entity.getEyeHeight(), 0.0) : position;
+            float normalYRot = toFirstPerson ? this.entity.getYRot() : yRot;
+            float normalXRot = toFirstPerson ? this.entity.getXRot() : xRot;
+
+            position = new Vec3(MathUtil.lerp(screenCameraPos.x, normalPos.x, easedProgress), MathUtil.lerp(screenCameraPos.y, normalPos.y, easedProgress), MathUtil.lerp(screenCameraPos.z, normalPos.z, easedProgress));
+            yRot = MathUtil.rotLerp(lastYRot, normalYRot, easedProgress);
+            xRot = (toFirstPerson || (SpatialGUI.config.lerpCameraPitch && SpatialGUIClient.getWasThirdPersonCamera())) ? MathUtil.lerp(lastXRot, normalXRot, easedProgress) : normalXRot;
+            this.rotation.rotationYXZ((float) Math.PI - this.yRot * ((float) Math.PI / 180F), -this.xRot * ((float) Math.PI / 180F), 0.0F);
+            SpatialGUIClient.setCameraPosition(position);
         } else {
             this.resetCameraState();
         }
@@ -151,7 +176,7 @@ public abstract class CameraMixin {
                 double xOffset = deltaX * sens * (client.options.invertMouseX().get() ? -1 : 1);
                 //?} else {
                 /*double xOffset = deltaX * sens;
-                *///?}
+                 *///?}
                 double yOffset = deltaY * sens * (client.options.invertMouseY().get() ? -1 : 1);
 
                 freeLookYaw += (float) xOffset;
@@ -251,8 +276,8 @@ public abstract class CameraMixin {
             xRot = newTargetXRot;
         } else {
             long elapsed = System.currentTimeMillis() - transitionStartTime;
-            float skipPercentage = SpatialGUI.config.transitionSkipPercentage / 100.0f;
-            float adjustedElapsed = elapsed + (skipPercentage * TRANSITION_DURATION_MS);
+            float skipFraction = SpatialGUI.config.transitionSkipPercentage / 100.0f;
+            float adjustedElapsed = elapsed + (skipFraction * TRANSITION_DURATION_MS);
             float progress = Math.min(adjustedElapsed / TRANSITION_DURATION_MS, 1.0f);
             float easedProgress = AnimationUtil.easeInOutSine(progress);
 
@@ -260,11 +285,14 @@ public abstract class CameraMixin {
             yRot = progress >= 1.0f ? newTargetYRot : MathUtil.rotLerp(startYRot, newTargetYRot, easedProgress);
             xRot = (SpatialGUI.config.lerpCameraPitch && SpatialGUIClient.getWasThirdPersonCamera() && progress < 1.0f) ? MathUtil.lerp(startXRot, newTargetXRot, easedProgress) : newTargetXRot;
         }
+        SpatialGUIClient.setCameraPosition(position);
     }
 
     @Unique
     private void resetCameraState() {
         startPos = null;
+        lastOffset = null;
+        closingCameraActive = false;
         wasCapturing = false;
         isTransitioning = false;
         smoothedCameraYaw = 0f;
@@ -280,6 +308,8 @@ public abstract class CameraMixin {
         SpatialGUIClient.setWasThirdPersonCamera(false);
         SpatialGUIClient.setSwitchedToFirstPersonDueToBlock(false);
         SpatialGUIClient.setEffectiveFirstPersonMode(false);
+        SpatialGUIClient.setCameraPosition(null);
+        SpatialGUIClient.setWasClosing(false);
         MouseHandlerUtil.updateMouseGrabForFirstPerson(false);
     }
 }

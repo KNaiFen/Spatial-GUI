@@ -29,13 +29,13 @@ import static com.mojang.blaze3d.platform.Lighting.Entry.LEVEL;
 
 //? if <26.1.2 {
 /*import net.minecraft.client.gui.GuiGraphics;
-*///?}
+ *///?}
 
 //? if neoforge {
 /*import net.neoforged.neoforge.client.ClientHooks;
-*///?} else if forge {
+ *///?} else if forge {
 /*import net.minecraftforge.client.ForgeHooksClient;
-*///?}
+ *///?}
 
 //? if >=26.1.2 {
 import net.minecraft.client.Minecraft;
@@ -53,7 +53,7 @@ public abstract class GameRendererMixin {
     @Shadow private boolean useUiLightmap;
     //? if >=26.2 {
     /*@Shadow @Final private net.minecraft.client.renderer.SubmitNodeStorage handAndScreenSubmitNodeStorage;
-    *///?} else {
+     *///?} else {
     @Shadow @Final private net.minecraft.client.renderer.RenderBuffers renderBuffers;
     //?}
     //? if <26.3 {
@@ -257,6 +257,8 @@ public abstract class GameRendererMixin {
         if (renderer != null && renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
             renderer.prepareTarget();
             renderer.onFrameStart();
+        } else if (renderer != null && renderer.isClosing()) {
+            renderer.onFrameStart();
         }
     }
 
@@ -275,7 +277,7 @@ public abstract class GameRendererMixin {
     /*@Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render()V"))
      *///?} else {
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/GuiRenderer;render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V"))
-    //?}
+            //?}
     private void spatialGUI$beforeGuiRender(CallbackInfo ci) {
         var renderer = SpatialGUIClient.renderer();
 
@@ -284,6 +286,8 @@ public abstract class GameRendererMixin {
             this.gameRenderState.windowRenderState.guiScale = Minecraft.getInstance().getWindow().getGuiScale();
 
             com.mojang.blaze3d.systems.RenderSystem.setShaderFog(this.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
+
+            renderer.clearTarget();
 
             //? if >=26.2 {
             /*renderer.getScreenGuiRenderer().render();
@@ -298,7 +302,6 @@ public abstract class GameRendererMixin {
             }
 
             renderer.renderInWorldPost();
-            renderer.clearTarget();
 
             if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.hideHandsInFirstPerson) {
                 spatialGUI$renderHandsInFront();
@@ -310,14 +313,20 @@ public abstract class GameRendererMixin {
 
             SpatialGUIRenderer.skipWindowOverride = true;
             this.gameRenderState.windowRenderState.guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        } else if (renderer != null && renderer.isClosing() && SpatialGUIClient.isEnabled()) {
+            renderer.renderInWorldPost();
+
+            if (renderer.isClosingFirstPerson() && !SpatialGUI.config.hideHandsInFirstPerson) {
+                spatialGUI$renderHandsInFront();
+            }
         }
     }
 
     //? if >=26.2 {
     /*@Inject(method = "extract", at = @At("HEAD"))
-    *///?} else {
+     *///?} else {
     @Inject(method = "extractGui", at = @At("HEAD"))
-    //?}
+            //?}
     private void spatialGUI$refreshMousePosition(CallbackInfo ci) {
         var renderer = SpatialGUIClient.renderer();
         if (renderer != null) {
@@ -363,6 +372,21 @@ public abstract class GameRendererMixin {
         if (renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
             SpatialGUIRenderer.skipWindowOverride = false;
             this.gameRenderState.windowRenderState.guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        }
+    }
+
+    //? if <26.3 {
+    @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
+            //?} else {
+    /*@Inject(method = "render3dHud", at = @At("HEAD"), cancellable = true)
+     *///?}
+    private void spatialGUI$hideHandWhileClosing(CallbackInfo ci) {
+        if (this.spatialGUI$isRedrawingHand) {
+            return;
+        }
+        var renderer = SpatialGUIClient.renderer();
+        if (renderer != null && renderer.isClosing() && renderer.isClosingFirstPerson() && SpatialGUIClient.isEnabled()) {
+            ci.cancel();
         }
     }
 
@@ -462,6 +486,8 @@ public abstract class GameRendererMixin {
         if (renderer != null && renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
             renderer.prepareTarget();
             renderer.onFrameStart();
+        } else if (renderer != null && renderer.isClosing()) {
+            renderer.onFrameStart();
         }
     }
 
@@ -481,17 +507,23 @@ public abstract class GameRendererMixin {
             SpatialGUIRenderer.skipWindowOverride = false;
 
             com.mojang.blaze3d.systems.RenderSystem.setShaderFog(this.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
+            renderer.clearTarget();
             renderer.getScreenGuiRenderer().render(this.fogRenderer.getBuffer(FogRenderer.FogMode.NONE));
             renderer.getScreenGuiRenderer().incrementFrameNumber();
 
             renderer.renderInWorldPost();
-            renderer.clearTarget();
 
             if (SpatialGUIClient.getEffectiveFirstPersonMode() && !SpatialGUI.config.hideHandsInFirstPerson) {
                 spatialGUI$renderHandsInFront();
             }
 
             SpatialGUIRenderer.skipWindowOverride = true;
+        } else if (renderer != null && renderer.isClosing() && SpatialGUIClient.isEnabled()) {
+            renderer.renderInWorldPost();
+
+            if (renderer.isClosingFirstPerson() && !SpatialGUI.config.hideHandsInFirstPerson) {
+                spatialGUI$renderHandsInFront();
+            }
         }
     }
     //? if fabric {
@@ -569,6 +601,17 @@ public abstract class GameRendererMixin {
     }
 
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
+    private void spatialGUI$hideHandWhileClosing(CallbackInfo ci) {
+        if (this.spatialGUI$isRedrawingHand) {
+            return;
+        }
+        var renderer = SpatialGUIClient.renderer();
+        if (renderer != null && renderer.isClosing() && renderer.isClosingFirstPerson() && SpatialGUIClient.isEnabled()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
     private void spatialGUI$overrideHideHand(CallbackInfo ci) {
         if (this.spatialGUI$isRedrawingHand) {
             return;
@@ -605,6 +648,8 @@ public class GameRendererMixin {
         }
         if (renderer != null && renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
             renderer.prepareTarget();
+            renderer.onFrameStart();
+        } else if (renderer != null && renderer.isClosing()) {
             renderer.onFrameStart();
         }
         SpatialGUIRenderer.skipWindowOverride = true;

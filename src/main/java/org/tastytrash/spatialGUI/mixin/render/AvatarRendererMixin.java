@@ -30,12 +30,18 @@ public class AvatarRendererMixin {
         Minecraft client = Minecraft.getInstance();
         var renderer = SpatialGUIClient.renderer();
 
-        if (entity != client.player || !renderer.shouldCapture() || !SpatialGUIClient.isEnabled()) {
+        boolean closing = renderer.isClosing() && !renderer.isClosingFirstPerson();
+
+        if (entity != client.player || !(renderer.shouldCapture() || closing) || !SpatialGUIClient.isEnabled()) {
             renderer.headLockInitialized = false;
             smoothedHeadYaw = 0f;
             smoothedHeadPitch = 0f;
             return;
         }
+
+        float vanillaBodyRot = state.bodyRot;
+        float vanillaYRot = state.yRot;
+        float vanillaXRot = state.xRot;
 
         boolean justOpened = !renderer.headLockInitialized;
 
@@ -74,6 +80,13 @@ public class AvatarRendererMixin {
 
         state.yRot = smoothedHeadYaw;
         state.xRot = smoothedHeadPitch;
+
+        if (closing) {
+            float blend = renderer.getCloseBlend();
+            state.bodyRot = Mth.rotLerp(blend, state.bodyRot, vanillaBodyRot);
+            state.yRot = Mth.rotLerp(blend, state.yRot, vanillaYRot);
+            state.xRot = Mth.lerp(blend, state.xRot, vanillaXRot);
+        }
     }
 }
 //?} else {
@@ -99,13 +112,18 @@ public class AvatarRendererMixin {
         Minecraft client = Minecraft.getInstance();
         var renderer = SpatialGUIClient.renderer();
 
-        if (entity != client.player || !renderer.shouldCapture() || !SpatialGUIClient.isEnabled()) {
+        boolean closing = renderer.isClosing() && !renderer.isClosingFirstPerson();
+
+        if (entity != client.player || !(renderer.shouldCapture() || closing) || !SpatialGUIClient.isEnabled()) {
             renderer.headLockInitialized = false;
             smoothedHeadYaw = 0f;
             smoothedHeadPitch = 0f;
-            original.call(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
             return;
         }
+
+        float vanillaBodyRot = state.bodyRot;
+        float vanillaYRot = state.yRot;
+        float vanillaXRot = state.xRot;
 
         if (SpatialGUIRenderer.isExtractingScreen) {
             original.call(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
@@ -168,6 +186,13 @@ public class AvatarRendererMixin {
             entity.yHeadRotO = oldHeadO;
             entity.setXRot(oldXRot);
             entity.xRotO = oldXRotO;
+        }
+
+        if (closing) {
+            float blend = renderer.getCloseBlend();
+            state.bodyRot = Mth.rotLerp(blend, state.bodyRot, vanillaBodyRot);
+            state.yRot = Mth.rotLerp(blend, state.yRot, vanillaYRot);
+            state.xRot = Mth.lerp(blend, state.xRot, vanillaXRot);
         }
     }
 }

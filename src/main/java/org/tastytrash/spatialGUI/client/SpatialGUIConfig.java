@@ -56,7 +56,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"firstPersonModeInventory", "firstPersonModeContainers"}, invert = true)
     @SerialEntry
     @AutoGen(category = "general", group = "viewMode")
-    @TickBox
     public boolean autoDetectCameraMode = false;
 
     @SerialEntry
@@ -73,7 +72,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"hideHotbar"}, invert = true)
     @SerialEntry
     @AutoGen(category = "general", group = "hud")
-    @TickBox
     public boolean hideHud = false;
 
     @SerialEntry
@@ -126,7 +124,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"guiScale"}, invert = true)
     @SerialEntry
     @AutoGen(category = "appearance", group = "size")
-    @TickBox
     public boolean autoCalculateGuiScale = true;
 
     @SerialEntry
@@ -154,7 +151,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"worldBlurStrength"})
     @SerialEntry
     @AutoGen(category = "appearance", group = "look")
-    @TickBox
     public boolean blurWorldBackground = false;
 
     @SerialEntry
@@ -177,7 +173,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"hideShieldInFirstPerson"}, invert = true)
     @SerialEntry
     @AutoGen(category = "appearance", group = "firstPersonHands")
-    @TickBox
     public boolean hideHandsInFirstPerson = false;
 
     @SerialEntry
@@ -311,7 +306,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"curvedScreenArcDegrees"})
     @SerialEntry
     @AutoGen(category = "firstPerson", group = "screen")
-    @TickBox
     public boolean curvedScreenEnabled = false;
 
     @SerialEntry
@@ -394,11 +388,15 @@ public class SpatialGUIConfig {
     // ==========
     // animations
     // ==========
-    // fade 
+    @SerialEntry
+    @AutoGen(category = "animations")
+    @TickBox
+    public boolean enableCloseAnimation = true;
+
+    // fade
     @MasterTickBox(value = {"fadeDurationMs"})
     @SerialEntry
     @AutoGen(category = "animations", group = "fade")
-    @TickBox
     public boolean enableFadeAnimation = true;
 
     @SerialEntry
@@ -410,7 +408,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"openAnimationDurationMs", "animationStartScalePercent", "animationEasing"})
     @SerialEntry
     @AutoGen(category = "animations", group = "scale")
-    @TickBox
     public boolean enableScaleAnimation = true;
 
     @SerialEntry
@@ -445,7 +442,6 @@ public class SpatialGUIConfig {
     @MasterTickBox(value = {"targetFov", "fovLerpSpeed"})
     @SerialEntry
     @AutoGen(category = "fov", group = "override")
-    @TickBox
     public boolean overrideFov = false;
 
     @SerialEntry
@@ -468,7 +464,6 @@ public class SpatialGUIConfig {
     })
     @SerialEntry
     @AutoGen(category = "fov", group = "autoScale")
-    @TickBox
     public boolean autoScaleByFov = true;
 
     @SerialEntry

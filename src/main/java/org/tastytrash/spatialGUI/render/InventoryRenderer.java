@@ -69,7 +69,7 @@ public class InventoryRenderer {
     private static final org.joml.Vector3f ZERO_VECTOR = new org.joml.Vector3f();
     private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
     private static final org.joml.Vector4f COLOR_MODULATOR = new org.joml.Vector4f();
-     //?}
+    //?}
     //? if >1.21.1 && <26.2 {
     private static final ByteBufferBuilder INVENTORY_BYTE_BUFFER = new ByteBufferBuilder(RenderType.SMALL_BUFFER_SIZE);
     //?}
@@ -101,6 +101,14 @@ public class InventoryRenderer {
     private boolean hasCapturedPerspective = false;
     private boolean hasDrawnThisFrame = false;
 
+    private boolean closing = false;
+    private long closeStartTime = 0;
+    private long closeStartElapsed = 0;
+    private long closeDurationMs = 0;
+    private boolean closeFirstPerson = false;
+    private float closeYaw;
+    private float closePitch;
+
     public InventoryRenderer(TextureTargetManager targetManager) {
         this.targetManager = targetManager;
     }
@@ -115,12 +123,12 @@ public class InventoryRenderer {
 
     private ScreenPose computeScreenPose(PoseStack matrices, boolean isFirstPerson) {
         var player = Minecraft.getInstance().player;
-        float yaw = player.getYRot();
-        float pitch = isFirstPerson ? player.getXRot() : 0;
+        float yaw = closing ? closeYaw : player.getYRot();
+        float pitch = isFirstPerson ? (closing ? closePitch : player.getXRot()) : 0;
         float pitchClamp = (float) SpatialGUI.config.firstPersonPitchClamp;
         //? if >=26.2 {
         /*pitch = Math.clamp(pitch, -pitchClamp, pitchClamp);
-        *///?} else {
+         *///?} else {
         pitch = Math.max(-pitchClamp, Math.min(pitch, pitchClamp));
         //?}
         float yawRadians = (float) Math.toRadians(yaw);
@@ -132,7 +140,7 @@ public class InventoryRenderer {
         double lookY = -Math.sin(pitchRadians);
         double lookZ = Math.cos(yawRadians) * Math.cos(pitchRadians);
 
-        float scale = AnimationUtil.calculateAnimatedScale(config.scale(), screenOpenTime, isRecipeBookOpen, recipeBookCloseDelay);
+        float scale = AnimationUtil.scaleForElapsed(config.scale(), getAnimationElapsedMs(), isRecipeBookOpen, recipeBookCloseDelay);
 
         if (matrices != null) {
             RenderUtil.applyScreenTransform(matrices, isFirstPerson, yawRadians, pitchRadians, config, lookX, lookY, lookZ);
@@ -227,6 +235,81 @@ public class InventoryRenderer {
     }
     *///?}
 
+    private static long animationTotalMs() {
+        long total = 0;
+        if (SpatialGUI.config.enableFadeAnimation) total = Math.max(total, SpatialGUI.config.fadeDurationMs);
+        if (SpatialGUI.config.enableScaleAnimation) total = Math.max(total, SpatialGUI.config.openAnimationDurationMs);
+        return total;
+    }
+
+    public boolean beginClosing() {
+        var player = Minecraft.getInstance().player;
+        if (!hasCapturedPerspective || player == null || targetManager.getInventoryTarget() == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        boolean firstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
+        long animationMs = Math.min(animationTotalMs(), Math.max(0L, now - screenOpenTime));
+
+        long cameraMs = firstPerson ? 0L : Math.round(Math.max(0, SpatialGUI.config.transitionDurationMs) * (1.0f - SpatialGUI.config.transitionSkipPercentage / 100.0f));
+        long duration = Math.max(animationMs, cameraMs);
+        if (duration <= 0L) {
+            return false;
+        }
+        closing = true;
+        closeStartTime = now;
+        closeStartElapsed = animationMs;
+        closeDurationMs = duration;
+        closeFirstPerson = firstPerson;
+        closeYaw = player.getYRot();
+        closePitch = player.getXRot();
+        hasDrawnThisFrame = false;
+        return true;
+    }
+
+    public boolean isClosingFirstPerson() {
+        return closeFirstPerson;
+    }
+
+    public long getCloseElapsedMs() {
+        return Math.max(0L, System.currentTimeMillis() - closeStartTime);
+    }
+
+    private boolean isFirstPersonNow() {
+        return closing ? closeFirstPerson : SpatialGUIClient.getEffectiveFirstPersonMode();
+    }
+
+    public boolean isClosing() {
+        return closing;
+    }
+
+    public boolean isCloseFinished() {
+        return System.currentTimeMillis() - closeStartTime >= closeDurationMs;
+    }
+
+    public void endClosing() {
+        closing = false;
+    }
+
+    private boolean canDraw() {
+        return closing ? getAnimationElapsedMs() > 0L : SpatialGUIClient.renderer().shouldCapture();
+    }
+
+    private long getAnimationElapsedMs() {
+        long now = System.currentTimeMillis();
+        if (!closing) {
+            return now - screenOpenTime;
+        }
+        return Math.max(0L, closeStartElapsed - (now - closeStartTime));
+    }
+
+    private float getFadeAlpha() {
+        if (!SpatialGUI.config.enableFadeAnimation) {
+            return 1.0F;
+        }
+        return Math.min(1.0F, getAnimationElapsedMs() / (float) Math.max(1, SpatialGUI.config.fadeDurationMs));
+    }
+
     public void resetPerspectiveState() {
         this.hasCapturedPerspective = false;
         this.hasDrawnThisFrame = false;
@@ -256,7 +339,7 @@ public class InventoryRenderer {
     /*public void renderInWorld(PoseStack matrices) {
         Minecraft client = Minecraft.getInstance();
 
-        if (targetManager.getInventoryTarget() == null || !SpatialGUIClient.renderer().shouldCapture() || client.player == null) {
+        if (targetManager.getInventoryTarget() == null || !canDraw() || client.player == null) {
             return;
         }
 
@@ -276,7 +359,7 @@ public class InventoryRenderer {
 
         matrices.pushPose();
 
-        boolean isFirstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
+        boolean isFirstPerson = isFirstPersonNow();
         ScreenPose screenPose = computeScreenPose(matrices, isFirstPerson);
         recipeBookCloseDelay = isRecipeBookOpen ? -2 : Math.min(0, recipeBookCloseDelay + 1);
 
@@ -308,9 +391,7 @@ public class InventoryRenderer {
             return;
         }
 
-        float fadeAlpha = SpatialGUI.config.enableFadeAnimation
-                ? Math.min(1.0F, (System.currentTimeMillis() - screenOpenTime) / (float) SpatialGUI.config.fadeDurationMs)
-                : 1.0F;
+        float fadeAlpha = getFadeAlpha();
         COLOR_MODULATOR.set(fadeAlpha, fadeAlpha, fadeAlpha, fadeAlpha);
         GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
                 IDENTITY_MATRIX,
@@ -381,7 +462,7 @@ public class InventoryRenderer {
     public void renderInWorld(PoseStack matrices) {
         Minecraft client = Minecraft.getInstance();
 
-        if (targetManager.getInventoryTarget() == null || !SpatialGUIClient.renderer().shouldCapture() || client.player == null) {
+        if (targetManager.getInventoryTarget() == null || !canDraw() || client.player == null) {
             return;
         }
 
@@ -392,7 +473,7 @@ public class InventoryRenderer {
 
         matrices.pushPose();
 
-        boolean isFirstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
+        boolean isFirstPerson = isFirstPersonNow();
         ScreenPose screenPose = computeScreenPose(matrices, isFirstPerson);
         recipeBookCloseDelay = isRecipeBookOpen ? -2 : Math.min(0, recipeBookCloseDelay + 1);
 
@@ -425,9 +506,7 @@ public class InventoryRenderer {
             return;
         }
 
-        float fadeAlpha = SpatialGUI.config.enableFadeAnimation
-                ? Math.min(1.0F, (System.currentTimeMillis() - screenOpenTime) / (float) SpatialGUI.config.fadeDurationMs)
-                : 1.0F;
+        float fadeAlpha = getFadeAlpha();
         COLOR_MODULATOR.set(fadeAlpha, fadeAlpha, fadeAlpha, fadeAlpha);
         GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
                 IDENTITY_MATRIX,
@@ -500,7 +579,7 @@ public class InventoryRenderer {
         Minecraft client = Minecraft.getInstance();
         RenderTarget target = targetManager.getInventoryTarget();
 
-        if (target == null || !SpatialGUIClient.renderer().shouldCapture() || client.player == null) {
+        if (target == null || !canDraw() || client.player == null) {
             return;
         }
 
@@ -511,7 +590,7 @@ public class InventoryRenderer {
 
         matrices.pushPose();
 
-        boolean isFirstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
+        boolean isFirstPerson = isFirstPersonNow();
         ScreenPose screenPose = computeScreenPose(matrices, isFirstPerson);
         recipeBookCloseDelay = isRecipeBookOpen ? -2 : Math.min(0, recipeBookCloseDelay + 1);
 
@@ -544,9 +623,7 @@ public class InventoryRenderer {
     //?}
         Minecraft client = Minecraft.getInstance();
 
-        float fadeAlpha = SpatialGUI.config.enableFadeAnimation
-                ? Math.min(1.0F, (System.currentTimeMillis() - screenOpenTime) / (float) SpatialGUI.config.fadeDurationMs)
-                : 1.0F;
+        float fadeAlpha = getFadeAlpha();
 
         int filter = SpatialGUI.config.useLinearFiltering ? GL11.GL_LINEAR : GL11.GL_NEAREST;
 

@@ -71,13 +71,16 @@ public final class AnimationUtil {
     }
 
     public static float calculateAnimatedScale(float baseScale, long screenOpenTime, boolean isRecipeBookOpen, int recipeBookCloseDelay) {
+        return scaleForElapsed(baseScale, System.currentTimeMillis() - screenOpenTime, isRecipeBookOpen, recipeBookCloseDelay);
+    }
+
+    public static float scaleForElapsed(float baseScale, long elapsedMs, boolean isRecipeBookOpen, int recipeBookCloseDelay) {
         int updatedDelay = isRecipeBookOpen ? -2 : Math.min(0, recipeBookCloseDelay + 1);
         boolean shouldShrink = isRecipeBookOpen || updatedDelay < 0;
         float scale = shouldShrink ? baseScale / (float) SpatialGUI.config.recipeBookShrinkFactor : baseScale;
 
         if (SpatialGUI.config.enableScaleAnimation) {
-            long elapsed = System.currentTimeMillis() - screenOpenTime;
-            float animationProgress = Math.min(1.0F, (float) elapsed / (float) SpatialGUI.config.openAnimationDurationMs);
+            float animationProgress = Math.min(1.0F, (float) elapsedMs / (float) SpatialGUI.config.openAnimationDurationMs);
             float easedProgress = applyEasing(SpatialGUI.config.animationEasing, animationProgress);
             float startScalePercent = SpatialGUI.config.animationStartScalePercent / 100.0f;
             float startScale = scale * startScalePercent;

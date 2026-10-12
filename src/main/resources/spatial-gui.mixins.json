@@ -42,6 +42,7 @@
     "render.HandRendererMixin",
     "render.LevelRendererMixin",
     "render.OwoBlurMixin",
+    "render.PlayerModelMixin",
     "render.RenderTargetMixin"
   ],
   "injectors": {
