@@ -14,7 +14,11 @@ public abstract class SophisticatedCoreMixin {
     @Shadow
     abstract void updateDimensionsAndSlotPositions(int height);
 
+    //? if 1.20.1 && forge {
+    /*@Inject(method = {"init", "m_7856_"}, at = @At("HEAD"), remap = false)
+    *///?} else {
     @Inject(method = "init", at = @At("HEAD"), remap = false, require = 0)
+    //?}
     private void spatialGUI$relayoutForScreenHeight(CallbackInfo ci) {
         updateDimensionsAndSlotPositions(((Screen) (Object) this).height);
     }
