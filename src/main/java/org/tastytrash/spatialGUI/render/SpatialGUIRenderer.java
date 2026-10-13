@@ -132,6 +132,7 @@ public class SpatialGUIRenderer {
 
     //? if neoforge || forge {
     /*private void onScreenRenderPre(ScreenEvent.Render.Pre event) {
+        if (SpatialGUIRenderer.isExtractingScreen) return;
         if (event.getScreen() == hookedScreen) {
             event.setCanceled(true);
             SpatialGUIRenderer.skipWindowOverride = false;

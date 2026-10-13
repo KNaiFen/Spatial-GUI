@@ -204,6 +204,7 @@ public class ScreenExtractor {
                 modelView.popMatrix();
                 RenderSystem.applyModelViewMatrix();
                 RenderSystem.setProjectionMatrix(oldProjection, oldSorting);
+                SpatialGUIRenderer.isExtractingScreen = false;
                 mc.getMainRenderTarget().bindWrite(true);
             }
         }
