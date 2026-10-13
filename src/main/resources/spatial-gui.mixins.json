@@ -17,6 +17,7 @@
     "client.OptionsMixin",
     "compat.DynamicCrosshairMixin",
     "compat.PolytoneMixin",
+    "compat.WatutMixin",
     "gui.DebugScreenOverlayMixin",
     "gui.GuiGraphicsCursorMixin",
     "gui.GuiMixin",
