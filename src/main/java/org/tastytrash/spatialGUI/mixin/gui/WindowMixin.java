@@ -48,7 +48,7 @@ public class WindowMixin {
     @Unique
     private int getGuiScale() {
         Window self = (Window)(Object) this;
-        return SpatialGUI.config.getEffectiveGuiScale(self.getWidth(), self.getHeight());
+        return GuiScaleUtil.effectiveScale(self);
     }
 
     @Unique

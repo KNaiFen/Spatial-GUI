@@ -7,10 +7,11 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.tastytrash.spatialGUI.compat.SophisticatedCoreCompat;
 
 @Pseudo
 @Mixin(targets = "net.p3pp3rf1y.sophisticatedcore.client.gui.StorageScreenBase", remap = false)
-public abstract class SophisticatedCoreMixin {
+public abstract class SophisticatedCoreMixin implements SophisticatedCoreCompat {
     @Shadow
     abstract void updateDimensionsAndSlotPositions(int height);
 

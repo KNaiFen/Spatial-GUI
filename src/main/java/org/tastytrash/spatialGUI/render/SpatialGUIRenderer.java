@@ -9,6 +9,7 @@ import org.tastytrash.spatialGUI.SpatialGUI;
 import org.tastytrash.spatialGUI.client.SpatialGUIClient;
 import org.tastytrash.spatialGUI.compat.ControlifyCompat;
 import org.tastytrash.spatialGUI.util.MouseHandlerUtil;
+import org.tastytrash.spatialGUI.util.GuiScaleUtil;
 import org.tastytrash.spatialGUI.util.CameraUtil;
 import org.tastytrash.spatialGUI.mixin.gui.MouseHandlerAccessor;
 import org.tastytrash.spatialGUI.util.RenderUtil;
@@ -296,7 +297,7 @@ public class SpatialGUIRenderer {
             return new Vector2d(sourceX, sourceY);
         }
 
-        double guiScale = SpatialGUI.config.getEffectiveGuiScale(client.getWindow().getWidth(), client.getWindow().getHeight());
+        double guiScale = GuiScaleUtil.effectiveScale(client.getWindow());
         Vector2d mappedMouse = MouseHandlerUtil.mapMousePosition(
                 sourceX, sourceY, quadBasis, inventoryRenderer.getCylinderBasis(), guiScale,
                 targetManager.getInventoryTarget()
