@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import org.joml.Vector2d;
 import org.tastytrash.spatialGUI.SpatialGUI;
+import org.tastytrash.spatialGUI.compat.ControlifyCompat;
 import org.tastytrash.spatialGUI.mixin.gui.GuiRendererAccessor;
 import org.tastytrash.spatialGUI.mixin.render.GameRendererAccessor;
 import org.tastytrash.spatialGUI.util.MouseHandlerUtil;
@@ -59,7 +60,7 @@ public class ScreenExtractor {
     //?}
     //? if neoforge {
     /*public static List<PictureInPictureRendererRegistration<?>> capturedPipRegistrations;
-    *///?}
+     *///?}
     //?}
 
     public void ensureScreenGuiRenderer() {
@@ -93,7 +94,7 @@ public class ScreenExtractor {
 
             ((GuiRendererAccessor) screenGuiRenderer)
                     .spatialGUI$setPictureInPictureRenderers(((GuiRendererAccessor) main)
-                    .spatialGUI$getPictureInPictureRenderers());
+                            .spatialGUI$getPictureInPictureRenderers());
 
             //?} else if neoforge {
             /*screenGuiRenderer = new GuiRenderer(
@@ -139,7 +140,11 @@ public class ScreenExtractor {
         ensureScreenGuiRenderer();
         Minecraft mc = Minecraft.getInstance();
         double guiScale = SpatialGUI.config.getEffectiveGuiScale(mc.getWindow().getWidth(), mc.getWindow().getHeight());
-        if (quadBasis != null) {
+        boolean flatCursor = false;
+        //? if neoforge {
+        /*flatCursor = ControlifyCompat.isVirtualMouseActive() && !SpatialGUIRenderer.isCrosshairModeActive();
+         *///?}
+        if (quadBasis != null && !flatCursor) {
             MouseHandlerUtil.mapMousePosition(MouseHandlerUtil.getSourceX(), MouseHandlerUtil.getSourceY(),
                     quadBasis, cylinderBasis, guiScale, targetManager.getInventoryTarget());
         }
@@ -151,9 +156,15 @@ public class ScreenExtractor {
         //? if >=26.1.2 {
         GuiGraphicsExtractor graphics = new GuiGraphicsExtractor(mc, screenRenderState, mouseX, mouseY);
         screen.extractRenderStateWithTooltipAndSubtitles(graphics, mouseX, mouseY, partialTick);
+        //? if neoforge {
+        /*ControlifyCompat.renderVirtualMouse(graphics, partialTick);
+         *///?}
         //?} else if >1.21.1 {
         /*GuiGraphics graphics = new GuiGraphics(mc, screenRenderState, mouseX, mouseY);
         screen.renderWithTooltipAndSubtitles(graphics, mouseX, mouseY, partialTick);
+        //? if neoforge {
+        /^ControlifyCompat.renderVirtualMouse(graphics, partialTick);
+        ^///?}
         *///?} else {
         /*var target = targetManager.getTarget();
         if (target != null) {

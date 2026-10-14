@@ -43,10 +43,10 @@ ___
 
 ## Dependencies
 
-| Loader | Mod                    |
-|--------|------------------------|
-| All    | Cloth Config           |
-| Fabric | Fabric API & Mod Menu  |
+| Loader | Mod                   |
+|--------|-----------------------|
+| All    | YACL                  |
+| Fabric | Fabric API & Mod Menu |
 
 ## Configuration
 

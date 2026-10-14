@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.tastytrash.spatialGUI.SpatialGUI;
 import org.tastytrash.spatialGUI.client.SpatialGUIClient;
+import org.tastytrash.spatialGUI.compat.ControlifyCompat;
 import org.tastytrash.spatialGUI.render.SpatialGUIRenderer;
 import org.tastytrash.spatialGUI.util.MouseHandlerUtil;
 
@@ -89,11 +90,11 @@ public class MouseHandlerMixin {
     *///?}
 
     @WrapMethod(method = "onMove")
-    //? if >=26.3 {
+            //? if >=26.3 {
     /*private void spatialGUI$onMove(long handle, double x, double y, double xrel, double yrel, Operation<Void> original) {
      *///?} else {
     private void spatialGUI$onMove(long handle, double x, double y, Operation<Void> original) {
-    //?}
+        //?}
         Minecraft mc = Minecraft.getInstance();
         //? if >1.21.1 {
         if (handle != mc.getWindow().handle()) return;
@@ -102,6 +103,15 @@ public class MouseHandlerMixin {
          *///?}
 
         MouseHandlerAccessor acc = (MouseHandlerAccessor) this;
+        if (x == -50.0 && y == -50.0 && !acc.getMouseGrabbed()) {
+            //? if >=26.3 {
+            /*original.call(handle, x, y, xrel, yrel);
+             *///?} else {
+            original.call(handle, x, y);
+            //?}
+            return;
+        }
+
         double[] delta = MouseHandlerUtil.captureMove(x, y, acc.getMouseGrabbed());
         //? if >=26.3 {
         /*delta[0] = xrel;
@@ -113,7 +123,7 @@ public class MouseHandlerMixin {
 
         var renderer = SpatialGUIClient.renderer();
         if (renderer != null && shouldApplyMouseOverride()) {
-            if (SpatialGUIRenderer.isCrosshairModeActive() && !acc.getIgnoreFirstMove()) {
+            if (SpatialGUIRenderer.isCrosshairModeActive() && !acc.getIgnoreFirstMove() && !ControlifyCompat.inVirtualMove) {
                 MouseHandlerUtil.addFreeLookDelta(delta[0], delta[1]);
             }
 
@@ -136,11 +146,11 @@ public class MouseHandlerMixin {
     }
 
     @Inject(method = "turnPlayer", at = @At("HEAD"), cancellable = true)
-    //? if >1.20.1 {
+            //? if >1.20.1 {
     private void spatialGUI$cancelPlayerRotation(double mousea, CallbackInfo ci) {
-    //?} else {
-    /*private void spatialGUI$cancelPlayerRotation(CallbackInfo ci) {
-    *///?}
+        //?} else {
+        /*private void spatialGUI$cancelPlayerRotation(CallbackInfo ci) {
+         *///?}
         if (SpatialGUIRenderer.isCrosshairModeActive()) {
             //? if <=1.21.1 {
             /*if (!shouldApplyMouseOverride()) {
@@ -185,6 +195,10 @@ public class MouseHandlerMixin {
         Minecraft spatialGUI$mc = Minecraft.getInstance();
         Screen spatialGUI$screen = spatialGUI$currentScreen(spatialGUI$mc);
         if (spatialGUI$crosshairIncoming() || spatialGUI$screen == null || !SpatialGUIClient.shouldHookScreen(spatialGUI$screen)) return;
+        var spatialGUI$window = spatialGUI$mc.getWindow();
+        if (spatialGUI$preReleaseX < 0 || spatialGUI$preReleaseY < 0
+                || spatialGUI$preReleaseX > spatialGUI$window.getScreenWidth()
+                || spatialGUI$preReleaseY > spatialGUI$window.getScreenHeight()) return;
         var spatialGUI$acc = (MouseHandlerAccessor) (Object) this;
         spatialGUI$acc.setRawXpos(spatialGUI$preReleaseX);
         spatialGUI$acc.setRawYpos(spatialGUI$preReleaseY);

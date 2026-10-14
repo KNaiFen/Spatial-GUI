@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import org.joml.Vector2d;
 import org.tastytrash.spatialGUI.SpatialGUI;
+import org.tastytrash.spatialGUI.compat.ControlifyCompat;
 import org.tastytrash.spatialGUI.mixin.gui.MouseHandlerAccessor;
 import org.tastytrash.spatialGUI.render.SpatialGUIRenderer;
 import org.tastytrash.spatialGUI.util.RenderUtil.QuadBasis;
@@ -11,7 +12,6 @@ import org.tastytrash.spatialGUI.util.RenderUtil.CylinderBasis;
 //? if <26.3 {
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
-
 import java.nio.DoubleBuffer;
 //?}
 
@@ -44,8 +44,8 @@ public class MouseHandlerUtil {
         freeLookDeltaY = 0;
 
         if (((MouseHandlerAccessor) mc.mouseHandler).getMouseGrabbed()) {
-            physicalX = mc.getWindow().getScreenWidth() / 2.0;
-            physicalY = mc.getWindow().getScreenHeight() / 2.0;
+            physicalX = centerX();
+            physicalY = centerY();
             lastPhysicalX = physicalX;
             lastPhysicalY = physicalY;
         } else {
@@ -61,7 +61,7 @@ public class MouseHandlerUtil {
                 GLFW.glfwGetCursorPos(mc.getWindow().handle(), x, y);
                 //?} else {
                 /*GLFW.glfwGetCursorPos(mc.getWindow().getWindow(), x, y);
-                *///?}
+                 *///?}
                 physicalX = x.get(0);
                 physicalY = y.get(0);
             }
@@ -82,18 +82,18 @@ public class MouseHandlerUtil {
         return delta;
     }
 
-    public static double getSourceX() {
-        Minecraft mc = Minecraft.getInstance();
-        return SpatialGUIRenderer.isCrosshairModeActive()
-                ? mc.getWindow().getScreenWidth() / 2.0
-                : getPhysicalX(mc.getWindow().getScreenWidth() / 2.0);
+    private static double centerX() {
+        return Minecraft.getInstance().getWindow().getScreenWidth() / 2.0;
+    }
+    private static double centerY() {
+        return Minecraft.getInstance().getWindow().getScreenHeight() / 2.0;
     }
 
+    public static double getSourceX() {
+        return SpatialGUIRenderer.isCrosshairModeActive() ? centerX() : getPhysicalX(centerX());
+    }
     public static double getSourceY() {
-        Minecraft mc = Minecraft.getInstance();
-        return SpatialGUIRenderer.isCrosshairModeActive()
-                ? mc.getWindow().getScreenHeight() / 2.0
-                : getPhysicalY(mc.getWindow().getScreenHeight() / 2.0);
+        return SpatialGUIRenderer.isCrosshairModeActive() ? centerY() : getPhysicalY(centerY());
     }
 
     public static double getPhysicalX(double fallback) {
@@ -161,9 +161,10 @@ public class MouseHandlerUtil {
         Minecraft mc = Minecraft.getInstance();
         //? if >=26.2 {
         /*if (mc.gui.screen() == null || SpatialGUIRenderer.isCrosshairModeActive()) return;
-        *///?} else {
+         *///?} else {
         if (mc.screen == null || SpatialGUIRenderer.isCrosshairModeActive()) return;
-         //?}
+        //?}
+        if (ControlifyCompat.isVirtualMouseActive()) return;
         MouseHandlerAccessor accessor = (MouseHandlerAccessor) mc.mouseHandler;
 
         //? if <26.3 {
@@ -171,22 +172,22 @@ public class MouseHandlerUtil {
         long window = mc.getWindow().handle();
         //?} else {
         /*long window = mc.getWindow().getWindow();
-        *///?}
-        boolean cursorFree = GLFW.glfwGetInputMode(window, GLFW.GLFW_CURSOR) == GLFW.GLFW_CURSOR_NORMAL;
+         *///?}
+        boolean cursorFree = GLFW.glfwGetInputMode(window, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_DISABLED;
         //?} else {
         /*boolean cursorFree = true;
-        *///?}
+         *///?}
 
         if (!accessor.getMouseGrabbed() && cursorFree) return;
 
         accessor.setMouseGrabbed(false);
-        double cx = mc.getWindow().getScreenWidth() / 2.0;
-        double cy = mc.getWindow().getScreenHeight() / 2.0;
+        double cx = centerX();
+        double cy = centerY();
         //? if >26.2 {
         /*InputConstants.releaseMouse(mc.getWindow(), cx, cy);
-        *///?} else if >1.21.1 {
+         *///?} else if >1.21.1 {
         InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_NORMAL, cx, cy);
-         //?} else {
+        //?} else {
         /*InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_NORMAL, cx, cy);
          *///?}
         accessor.setRawXpos(cx);
@@ -198,14 +199,23 @@ public class MouseHandlerUtil {
     public static void grabMouseForFirstPerson() {
         Minecraft mc = Minecraft.getInstance();
         MouseHandlerAccessor accessor = (MouseHandlerAccessor) mc.mouseHandler;
-        if (!accessor.getMouseGrabbed()) {
+        boolean needsGrab = !accessor.getMouseGrabbed();
+        //? if <26.3 {
+        //? if >1.21.1 {
+        long window = mc.getWindow().handle();
+        //?} else {
+        /*long window = mc.getWindow().getWindow();
+         *///?}
+        needsGrab |= GLFW.glfwGetInputMode(window, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_DISABLED;
+        //?}
+        if (needsGrab) {
             accessor.setMouseGrabbed(true);
             double centerX = mc.getWindow().getScreenWidth() / 2.0;
             double centerY = mc.getWindow().getScreenHeight() / 2.0;
             //? if >26.2 {
             /*InputConstants.grabMouse(mc.getWindow(), centerX, centerY);
-            *///?} else {
-             InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_DISABLED, centerX, centerY);
+             *///?} else {
+            InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_DISABLED, centerX, centerY);
             //?}
             mc.mouseHandler.setIgnoreFirstMove();
         }
@@ -216,14 +226,20 @@ public class MouseHandlerUtil {
         if (!weGrabbedMouse) return;
         Minecraft mc = Minecraft.getInstance();
         MouseHandlerAccessor accessor = (MouseHandlerAccessor) mc.mouseHandler;
+
+        if (ControlifyCompat.isVirtualMouseActive()) {
+            weGrabbedMouse = false;
+            return;
+        }
+
         if (accessor.getMouseGrabbed()) {
             accessor.setMouseGrabbed(false);
             double centerX = mc.getWindow().getScreenWidth() / 2.0;
             double centerY = mc.getWindow().getScreenHeight() / 2.0;
             //? if >26.2 {
             /*InputConstants.releaseMouse(mc.getWindow(), centerX, centerY);
-            *///?} else {
-             InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_NORMAL, centerX, centerY);
+             *///?} else {
+            InputConstants.grabOrReleaseMouse(mc.getWindow(), InputConstants.CURSOR_NORMAL, centerX, centerY);
             //?}
         }
         weGrabbedMouse = false;
@@ -235,5 +251,24 @@ public class MouseHandlerUtil {
         } else {
             grabMouseForFirstPerson();
         }
+    }
+
+    public static void setFlatPosition(double rawX, double rawY) {
+        var w = Minecraft.getInstance().getWindow();
+        mappedX = rawX * w.getGuiScaledWidth()  / (double) w.getScreenWidth();
+        mappedY = rawY * w.getGuiScaledHeight() / (double) w.getScreenHeight();
+    }
+
+    private static final double LOOK_PX_PER_SECOND = 1200;
+    private static long lookNanos;
+
+    public static void resetLookClock() { lookNanos = 0; }
+
+    public static void addStickLook(double[] stick) {
+        long now = System.nanoTime();
+        double dt = lookNanos == 0 ? 0 : Math.min((now - lookNanos) / 1e9, 0.1);
+        lookNanos = now;
+        if (stick == null || !Double.isFinite(stick[0]) || !Double.isFinite(stick[1])) return;
+        addFreeLookDelta(stick[0] * LOOK_PX_PER_SECOND * dt, stick[1] * LOOK_PX_PER_SECOND * dt);
     }
 }

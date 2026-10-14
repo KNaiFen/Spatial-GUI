@@ -674,7 +674,7 @@ public class GameRendererMixin {
     //?}
     private void spatialGUI$drawBeforeHud(CallbackInfo ci) {
         var renderer = SpatialGUIClient.renderer();
-        if (renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
+        if (renderer != null && SpatialGUIClient.isEnabled() && (renderer.shouldCapture() || renderer.isClosing())) {
             renderer.renderInWorldPost();
         }
     }
@@ -751,11 +751,16 @@ public class GameRendererMixin {
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
     private void spatialGUI$overrideHideHand(CallbackInfo ci) {
         var renderer = SpatialGUIClient.renderer();
-        if (renderer.shouldCapture() && SpatialGUIClient.isEnabled()) {
-            renderer.renderInWorldPost();
-            if (SpatialGUIClient.getEffectiveFirstPersonMode() && SpatialGUI.config.hideHandsInFirstPerson) {
-                ci.cancel();
-            }
+        if (renderer == null || !SpatialGUIClient.isEnabled()) return;
+
+        boolean closing = renderer.isClosing();
+        if (!renderer.shouldCapture() && !closing) return;
+
+        renderer.renderInWorldPost();
+
+        boolean firstPerson = closing ? renderer.isClosingFirstPerson() : SpatialGUIClient.getEffectiveFirstPersonMode();
+        if (firstPerson && SpatialGUI.config.hideHandsInFirstPerson) {
+            ci.cancel();
         }
     }
 }

@@ -79,10 +79,7 @@ public abstract class LocalPlayerMixin {
         float camYaw = spatialGUI$cameraYaw();
 
         if (!spatialGUI$wasActive) {
-            this.xBob = this.xBobO = camPitch;
-            this.yBob = this.yBobO = camYaw;
             spatialGUI$wasActive = true;
-            return;
         }
 
         this.xBob = spatialGUI$xBobBefore + (camPitch - spatialGUI$xBobBefore) * 0.5F;

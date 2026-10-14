@@ -7,6 +7,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector2d;
 import org.tastytrash.spatialGUI.SpatialGUI;
 import org.tastytrash.spatialGUI.client.SpatialGUIClient;
+import org.tastytrash.spatialGUI.compat.ControlifyCompat;
 import org.tastytrash.spatialGUI.util.MouseHandlerUtil;
 import org.tastytrash.spatialGUI.util.CameraUtil;
 import org.tastytrash.spatialGUI.mixin.gui.MouseHandlerAccessor;
@@ -270,8 +271,7 @@ public class SpatialGUIRenderer {
         MouseHandlerAccessor mouseHandler = (MouseHandlerAccessor) client.mouseHandler;
         boolean isFirstPerson = SpatialGUIClient.getEffectiveFirstPersonMode();
 
-        Vector2d mappedMouse = updateMousePosition(
-                MouseHandlerUtil.getSourceX(), MouseHandlerUtil.getSourceY());
+        Vector2d mappedMouse = updateMousePosition(MouseHandlerUtil.getSourceX(), MouseHandlerUtil.getSourceY());
 
         if (mappedMouse == null) {
             return;
@@ -288,6 +288,11 @@ public class SpatialGUIRenderer {
         RenderUtil.QuadBasis quadBasis = inventoryRenderer.getQuadBasis();
         if (quadBasis == null) {
             return null;
+        }
+
+        if (ControlifyCompat.isVirtualMouseActive() && !isCrosshairModeActive()) {
+            MouseHandlerUtil.setFlatPosition(sourceX, sourceY);
+            return new Vector2d(sourceX, sourceY);
         }
 
         double guiScale = SpatialGUI.config.getEffectiveGuiScale(client.getWindow().getWidth(), client.getWindow().getHeight());
@@ -410,6 +415,7 @@ public class SpatialGUIRenderer {
             finishClosing();
         }
         MouseHandlerUtil.syncCursorGrab();
+        ControlifyCompat.handleFreeLook(isCrosshairModeActive());
         updateFovProgress();
     }
 

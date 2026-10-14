@@ -102,7 +102,9 @@ dependencies {
         modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
         modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
     } else if (isNeoForge) {
-        implementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
+        implementation("dev.isxander:yet-another-config-lib:${project.yacl_version}") {
+            exclude group: 'thedarkcolour'
+        }
     } else if (isForge) {
         modImplementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
         compileOnly 'org.spongepowered:mixin:0.8.5'

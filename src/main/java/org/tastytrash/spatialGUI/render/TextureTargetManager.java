@@ -23,9 +23,9 @@ public class TextureTargetManager {
         }
 
         //? if <1.21.11 {
-        /*// Transparent black, depth handled by RenderTarget.clear
-        inventoryTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+        /*inventoryTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
         inventoryTarget.clear(Minecraft.ON_OSX);
+        Minecraft.getInstance().getMainRenderTarget().bindWrite(true);
         *///?} else {
         var colorTexture = inventoryTarget.getColorTexture();
         var depthTexture = inventoryTarget.getDepthTexture();
